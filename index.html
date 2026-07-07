@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="宿カレンダー">
+<title>宿カレンダー管理</title>
+<style>
+  :root { --accent:#FF385C; --ink:#222; --sub:#717171; --line:#ebebeb; --ok:#008a05; }
+  * { box-sizing:border-box; margin:0; padding:0; font-family:"Hiragino Sans","Yu Gothic UI","Segoe UI",system-ui,sans-serif; }
+  body { color:var(--ink); background:#fff; }
+  header { display:flex; align-items:center; gap:12px; padding:12px 16px; border-bottom:1px solid var(--line); position:sticky; top:0; background:#fff; z-index:10; flex-wrap:wrap; }
+  header h1 { font-size:17px; font-weight:700; }
+  .month-nav { display:flex; align-items:center; gap:8px; }
+  .month-nav button { border:1px solid var(--line); background:#fff; border-radius:50%; width:34px; height:34px; font-size:16px; cursor:pointer; }
+  .month-nav button:hover { background:#f7f7f7; }
+  #monthLabel { font-size:16px; font-weight:700; min-width:120px; text-align:center; }
+  .spacer { flex:1; }
+  .chipbar { display:flex; gap:6px; align-items:center; flex-wrap:wrap; }
+  .chip { border:1px solid var(--line); background:#fff; border-radius:999px; padding:6px 12px; font-size:12px; cursor:pointer; }
+  .chip:hover { border-color:#222; }
+  #status { font-size:12px; color:var(--sub); padding:4px 16px; min-height:20px; }
+  .layout { display:flex; gap:0; align-items:flex-start; }
+  .cal-wrap { flex:1; padding:8px 8px 40px 16px; min-width:0; }
+  table.cal { width:100%; border-collapse:collapse; table-layout:fixed; }
+  .cal th { font-size:12px; color:var(--sub); font-weight:600; padding:6px 0; }
+  .cal td { border:1px solid var(--line); height:92px; vertical-align:top; padding:5px 6px; cursor:pointer; position:relative; user-select:none; -webkit-user-select:none; }
+  .cal td.empty { background:#fafafa; cursor:default; }
+  .cal td:hover:not(.empty) { border-color:#bbb; }
+  .cal td.selected { outline:2px solid var(--ink); outline-offset:-2px; border-radius:8px; z-index:1; }
+  .d { font-size:13px; font-weight:600; }
+  .d.today { color:#fff; background:var(--accent); border-radius:50%; display:inline-block; width:22px; height:22px; text-align:center; line-height:22px; }
+  .price { font-size:13px; font-weight:700; margin-top:5px; }
+  .meta { font-size:10px; color:var(--sub); margin-top:2px; }
+  td.booked { background:#f0f7ff; }
+  td.booked .price { color:var(--sub); text-decoration:line-through; }
+  .guest { font-size:10px; background:#1a73e8; color:#fff; border-radius:4px; padding:1px 5px; display:inline-block; margin-top:4px; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  td.blocked { background:repeating-linear-gradient(45deg,#fafafa,#fafafa 6px,#f0f0f0 6px,#f0f0f0 12px); }
+  .blocklabel { font-size:10px; color:var(--sub); margin-top:4px; }
+  .panel { width:300px; border-left:1px solid var(--line); padding:18px; position:sticky; top:60px; }
+  .panel h2 { font-size:15px; margin-bottom:4px; }
+  .panel .sel-info { font-size:12px; color:var(--sub); margin-bottom:14px; }
+  .field { margin-bottom:13px; }
+  .field label { display:block; font-size:12px; font-weight:600; margin-bottom:4px; }
+  .field input, .field select { width:100%; padding:9px 10px; border:1px solid #b0b0b0; border-radius:8px; font-size:14px; }
+  .field .hint { font-size:11px; color:var(--sub); margin-top:3px; }
+  .auto-tag { font-size:10px; color:var(--ok); margin-left:6px; }
+  .btn { width:100%; padding:12px; border:none; border-radius:8px; background:var(--accent); color:#fff; font-size:15px; font-weight:700; cursor:pointer; }
+  .btn:disabled { background:#ddd; cursor:default; }
+  .btn.ghost { background:#fff; color:var(--ink); border:1px solid var(--ink); margin-top:8px; }
+  #toast { position:fixed; bottom:24px; left:50%; transform:translateX(-50%); background:#222; color:#fff; padding:12px 20px; border-radius:8px; font-size:14px; display:none; z-index:100; max-width:90vw; }
+  .legend { display:flex; gap:14px; font-size:11px; color:var(--sub); padding:0 16px 6px; flex-wrap:wrap; }
+  .legend span::before { content:""; display:inline-block; width:10px; height:10px; border-radius:2px; margin-right:4px; vertical-align:-1px; }
+  .lg-open::before { background:#fff; border:1px solid #ccc; }
+  .lg-booked::before { background:#f0f7ff; border:1px solid #cfe3ff; }
+  .lg-blocked::before { background:repeating-linear-gradient(45deg,#fafafa,#fafafa 3px,#e0e0e0 3px,#e0e0e0 6px); }
+  /* 設定モーダル */
+  #settingsOverlay { position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:50; display:none; align-items:center; justify-content:center; padding:16px; }
+  #settingsOverlay.show { display:flex; }
+  .modal { background:#fff; border-radius:14px; padding:24px; width:420px; max-width:100%; max-height:90vh; overflow:auto; }
+  .modal h2 { font-size:17px; margin-bottom:6px; }
+  .modal .desc { font-size:12px; color:var(--sub); margin-bottom:16px; }
+  .modal .row2 { display:flex; gap:10px; }
+  .modal .row2 .field { flex:1; }
+  @media (max-width:820px){
+    .layout{flex-direction:column;}
+    .panel{width:100%; border-left:none; border-top:1px solid var(--line); position:static;}
+    .cal td{height:72px; padding:3px 4px;}
+    .price{font-size:11px;} .meta{display:none;} .guest{font-size:9px;}
+    header{padding:10px 12px; gap:8px;}
+  }
+</style>
+</head>
+<body>
+<header>
+  <h1 id="propName">宿カレンダー</h1>
+  <div class="month-nav">
+    <button id="prevBtn">‹</button>
+    <div id="monthLabel"></div>
+    <button id="nextBtn">›</button>
+  </div>
+  <button class="chip" id="todayBtn">今日</button>
+  <div class="spacer"></div>
+  <div class="chipbar">
+    <span style="font-size:11px;color:var(--sub)">曜日選択:</span>
+    <button class="chip" data-dow="5">金</button>
+    <button class="chip" data-dow="6">土</button>
+    <button class="chip" data-dow="0">日</button>
+    <button class="chip" id="clearSel">選択解除</button>
+    <button class="chip" id="reloadBtn">↻ 更新</button>
+    <button class="chip" id="settingsBtn">⚙ 設定</button>
+  </div>
+</header>
+<div class="legend"><span class="lg-open">空室(タップで選択、ドラッグで範囲選択)</span><span class="lg-booked">予約済</span><span class="lg-blocked">ブロック中</span></div>
+<div id="status"></div>
+<div class="layout">
+  <div class="cal-wrap">
+    <table class="cal">
+      <thead><tr><th>日</th><th>月</th><th>火</th><th>水</th><th>木</th><th>金</th><th>土</th></tr></thead>
+      <tbody id="calBody"></tbody>
+    </table>
+  </div>
+  <div class="panel">
+    <h2>選択した日付の編集</h2>
+    <div class="sel-info" id="selInfo">日付を選択してください</div>
+    <div class="field">
+      <label>Airbnb価格 (P1)</label>
+      <input type="number" id="inP1" placeholder="変更しない" inputmode="numeric">
+      <div class="hint">入力するとBooking.com・自社HPを自動計算(手修正も可)</div>
+    </div>
+    <div class="field">
+      <label>Booking.com価格 (P2) <span class="auto-tag" id="autoP2"></span></label>
+      <input type="number" id="inP2" placeholder="変更しない" inputmode="numeric">
+    </div>
+    <div class="field">
+      <label>自社HP価格 (P5) <span class="auto-tag" id="autoP5"></span></label>
+      <input type="number" id="inP5" placeholder="変更しない" inputmode="numeric">
+      <div class="hint">空欄の価格は変更されません</div>
+    </div>
+    <div class="field">
+      <label>最低泊数</label>
+      <input type="number" id="inMin" placeholder="変更しない" min="1" inputmode="numeric">
+    </div>
+    <div class="field">
+      <label>空室状態</label>
+      <select id="inAvail">
+        <option value="">変更しない</option>
+        <option value="1">空室にする(販売)</option>
+        <option value="0">ブロックする(販売停止)</option>
+      </select>
+      <div class="hint">予約済みの日は変更できません</div>
+    </div>
+    <button class="btn" id="saveBtn" disabled>Beds24に保存</button>
+    <button class="btn ghost" id="resetBtn">入力をクリア</button>
+  </div>
+</div>
+
+<div id="settingsOverlay">
+  <div class="modal">
+    <h2>設定</h2>
+    <div class="desc">キーはこの端末のブラウザ内にのみ保存されます(サーバーには送られません)。Beds24の (SETTINGS) ACCOUNT > ACCOUNT ACCESS でAPIキー、(SETTINGS) PROPERTIES > ACCESS でpropKeyを発行できます。</div>
+    <div class="field"><label>Beds24 APIキー</label><input type="text" id="cfgApiKey"></div>
+    <div class="field"><label>propKey(物件キー)</label><input type="text" id="cfgPropKey"></div>
+    <div class="row2">
+      <div class="field"><label>roomId</label><input type="text" id="cfgRoomId"></div>
+      <div class="field"><label>物件名(表示用)</label><input type="text" id="cfgName"></div>
+    </div>
+    <div class="row2">
+      <div class="field"><label>Booking.com係数</label><input type="number" step="0.001" id="cfgBcomRatio"><div class="hint">P2=P1×係数。手数料差吸収(推奨1.19)</div></div>
+      <div class="field"><label>自社HP係数</label><input type="number" step="0.001" id="cfgHpRatio"><div class="hint">P5=P1×係数。最低レート保証(推奨0.95)</div></div>
+    </div>
+    <div class="field"><label>下限価格(円/泊)</label><input type="number" id="cfgFloor"><div class="hint">これを下回る保存は警告(損益分岐ガード)</div></div>
+    <button class="btn" id="cfgSaveBtn">保存して開始</button>
+  </div>
+</div>
+<div id="toast"></div>
+<script>
+const DEFAULTS = { roomId:'548308', name:'野町villa 一棟貸切', bcomRatio:1.19, hpRatio:0.95, floor:8000 };
+let CONFIG = null;
+function loadConfig(){
+  try { CONFIG = JSON.parse(localStorage.getItem('yadoCalConfig')); } catch(e){ CONFIG = null; }
+}
+function saveConfig(c){ localStorage.setItem('yadoCalConfig', JSON.stringify(c)); CONFIG = c; }
+
+const state = { y: new Date().getFullYear(), m: new Date().getMonth(), roomDates: {}, bookedMap: {}, selected: new Set(), dragging: false, dragMode: true, p2Manual:false, p5Manual:false };
+
+const $ = id => document.getElementById(id);
+const pad = n => String(n).padStart(2,'0');
+const key = (y,m,d) => `${y}${pad(m+1)}${pad(d)}`;
+const iso = (y,m,d) => `${y}-${pad(m+1)}-${pad(d)}`;
+const yen = v => '¥' + Math.round(parseFloat(v)).toLocaleString();
+const round10 = v => Math.round(v/10)*10;
+
+function toast(msg, ms=3000){ const t=$('toast'); t.textContent=msg; t.style.display='block'; clearTimeout(t._h); t._h=setTimeout(()=>t.style.display='none', ms); }
+function setStatus(msg){ $('status').textContent = msg; }
+
+async function api(ep, body){
+  // 注意: Content-Typeヘッダーを付けるとCORS preflightが発生しBeds24側で失敗するため付けない
+  const r = await fetch('https://api.beds24.com/json/'+ep, {method:'POST', body: JSON.stringify(body)});
+  if(!r.ok) throw new Error('HTTP '+r.status);
+  const j = await r.json();
+  if(j && j.error) throw new Error(j.error);
+  return j;
+}
+const auth = () => ({apiKey: CONFIG.apiKey, propKey: CONFIG.propKey});
+
+async function load(){
+  if(!CONFIG || !CONFIG.apiKey || !CONFIG.propKey){ openSettings(); return; }
+  $('propName').textContent = CONFIG.name || '宿カレンダー';
+  setStatus('読み込み中…');
+  const y=state.y, m=state.m;
+  const last = new Date(y, m+1, 0).getDate();
+  // APIは過去日付を受け付けないため、開始日は「昨日」以降に丸める
+  const yest = new Date(); yest.setDate(yest.getDate()-1); yest.setHours(0,0,0,0);
+  const monthStart = new Date(y, m, 1);
+  const fromDate = monthStart < yest ? yest : monthStart;
+  const monthEnd = new Date(y, m, last);
+  const from = iso(fromDate.getFullYear(), fromDate.getMonth(), fromDate.getDate()), to = iso(y,m,last);
+  const skipRates = monthEnd < yest; // 過去の月は料金取得をスキップし予約のみ表示
+  const arrFrom = new Date(y, m, 1); arrFrom.setDate(arrFrom.getDate()-45);
+  try{
+    const [rd, bk] = await Promise.all([
+      skipRates ? Promise.resolve({}) : api('getRoomDates', {authentication:auth(), roomId: CONFIG.roomId, from, to}),
+      api('getBookings', {authentication:auth(), arrivalFrom: iso(arrFrom.getFullYear(),arrFrom.getMonth(),arrFrom.getDate()), arrivalTo: to})
+    ]);
+    state.roomDates = rd || {};
+    state.bookedMap = {};
+    (Array.isArray(bk)?bk:[]).forEach(b=>{
+      if(!['1','2','3','4'].includes(String(b.status))) return; // 0=キャンセルは除外
+      const label = String(b.status)==='4' ? 'ブラックアウト' : `${b.guestFirstName||''} (${b.referer||b.apiSource||''})`;
+      let d = new Date(b.firstNight+'T00:00:00');
+      const end = new Date(b.lastNight+'T00:00:00');
+      while(d <= end){
+        state.bookedMap[key(d.getFullYear(), d.getMonth(), d.getDate())] = label;
+        d.setDate(d.getDate()+1);
+      }
+    });
+    render();
+    setStatus(`最終更新: ${new Date().toLocaleTimeString('ja-JP')}　(Beds24連携中)`);
+  }catch(e){
+    setStatus('');
+    toast('読み込みエラー: '+e.message, 6000);
+  }
+}
+
+function render(){
+  const y=state.y, m=state.m;
+  $('monthLabel').textContent = `${y}年${m+1}月`;
+  const firstDow = new Date(y,m,1).getDay();
+  const last = new Date(y,m+1,0).getDate();
+  const today = new Date(); const todayKey = key(today.getFullYear(), today.getMonth(), today.getDate());
+  let html='', cell=0;
+  html+='<tr>';
+  for(let i=0;i<firstDow;i++){ html+='<td class="empty"></td>'; cell++; }
+  for(let d=1; d<=last; d++){
+    const k = key(y,m,d);
+    const rd = state.roomDates[k]||{};
+    const booked = state.bookedMap[k];
+    const blocked = !booked && String(rd.i)==='0';
+    const cls = [booked?'booked':'', blocked?'blocked':'', state.selected.has(k)?'selected':''].join(' ');
+    html+=`<td class="${cls}" data-k="${k}">`;
+    html+=`<span class="d ${k===todayKey?'today':''}">${d}</span>`;
+    if(rd.p1!==undefined) html+=`<div class="price">${yen(rd.p1)}</div>`;
+    if(rd.m!==undefined) html+=`<div class="meta">最低${rd.m}泊</div>`;
+    if(booked) html+=`<span class="guest">${booked}</span>`;
+    if(blocked) html+=`<div class="blocklabel">ブロック中</div>`;
+    html+='</td>';
+    cell++;
+    if(cell%7===0 && d<last) html+='</tr><tr>';
+  }
+  while(cell%7!==0){ html+='<td class="empty"></td>'; cell++; }
+  html+='</tr>';
+  $('calBody').innerHTML = html;
+  document.querySelectorAll('td[data-k]').forEach(td=>{
+    td.addEventListener('mousedown', e=>{ e.preventDefault(); state.dragging=true; state.dragMode=!state.selected.has(td.dataset.k); toggleSel(td.dataset.k, state.dragMode); });
+    td.addEventListener('mouseover', ()=>{ if(state.dragging) toggleSel(td.dataset.k, state.dragMode); });
+    td.addEventListener('touchstart', ()=>{ toggleSel(td.dataset.k, !state.selected.has(td.dataset.k)); }, {passive:true});
+  });
+  updatePanel();
+}
+document.addEventListener('mouseup', ()=> state.dragging=false);
+
+function toggleSel(k, on){
+  if(on) state.selected.add(k); else state.selected.delete(k);
+  const td = document.querySelector(`td[data-k="${k}"]`);
+  if(td) td.classList.toggle('selected', on);
+  updatePanel();
+}
+
+function updatePanel(){
+  const n = state.selected.size;
+  $('selInfo').textContent = n ? `${n}日選択中` : '日付を選択してください';
+  $('saveBtn').disabled = n===0;
+}
+
+// ==== 手数料差の自動計算 ====
+$('inP1').addEventListener('input', ()=>{
+  const v = parseFloat($('inP1').value);
+  if(isNaN(v)){ if(!state.p2Manual) $('inP2').value=''; if(!state.p5Manual) $('inP5').value=''; $('autoP2').textContent=''; $('autoP5').textContent=''; return; }
+  if(!state.p2Manual){ $('inP2').value = round10(v * (CONFIG.bcomRatio||1.19)); $('autoP2').textContent='自動'; }
+  if(!state.p5Manual){ $('inP5').value = Math.max(round10(v * (CONFIG.hpRatio||0.95)), CONFIG.floor||0); $('autoP5').textContent='自動'; }
+});
+$('inP2').addEventListener('keydown', ()=>{ state.p2Manual=true; $('autoP2').textContent='手動'; });
+$('inP5').addEventListener('keydown', ()=>{ state.p5Manual=true; $('autoP5').textContent='手動'; });
+
+$('prevBtn').onclick = ()=>{ state.m--; if(state.m<0){state.m=11;state.y--;} state.selected.clear(); load(); };
+$('nextBtn').onclick = ()=>{ state.m++; if(state.m>11){state.m=0;state.y++;} state.selected.clear(); load(); };
+$('todayBtn').onclick = ()=>{ const t=new Date(); state.y=t.getFullYear(); state.m=t.getMonth(); state.selected.clear(); load(); };
+$('reloadBtn').onclick = ()=> load();
+$('clearSel').onclick = ()=>{ state.selected.clear(); render(); };
+$('resetBtn').onclick = ()=>{ ['inP1','inP2','inP5','inMin'].forEach(i=>$(i).value=''); $('inAvail').value=''; state.p2Manual=false; state.p5Manual=false; $('autoP2').textContent=''; $('autoP5').textContent=''; };
+document.querySelectorAll('.chip[data-dow]').forEach(ch=>{
+  ch.onclick = ()=>{
+    const dow = parseInt(ch.dataset.dow);
+    const last = new Date(state.y, state.m+1, 0).getDate();
+    for(let d=1; d<=last; d++){
+      if(new Date(state.y, state.m, d).getDay()===dow) state.selected.add(key(state.y,state.m,d));
+    }
+    render();
+  };
+});
+
+$('saveBtn').onclick = async ()=>{
+  const p1=$('inP1').value, p2=$('inP2').value, p5=$('inP5').value, mn=$('inMin').value, av=$('inAvail').value;
+  if(!p1 && !p2 && !p5 && !mn && av===''){ toast('変更内容を入力してください'); return; }
+  // 下限価格ガード
+  const floor = CONFIG.floor || 0;
+  const below = [p1,p2,p5].filter(v=>v && parseFloat(v) < floor);
+  if(below.length && !confirm(`警告: 下限価格 ${yen(floor)} を下回る価格が含まれます。本当に保存しますか?`)) return;
+  const dates={};
+  const bookedSel=[];
+  state.selected.forEach(k=>{
+    const o={};
+    if(p1) o.p1=p1; if(p2) o.p2=p2; if(p5) o.p5=p5; if(mn) o.m=mn;
+    if(av!==''){
+      if(state.bookedMap[k]){ bookedSel.push(k); } else { o.i=av; }
+    }
+    if(Object.keys(o).length) dates[k]=o;
+  });
+  if(bookedSel.length && av!==''){ toast(`予約済みの${bookedSel.length}日は空室状態を変更せずスキップします`, 4000); }
+  if(!Object.keys(dates).length){ toast('適用対象がありません'); return; }
+  const parts=[];
+  if(p1) parts.push(`Airbnb→${yen(p1)}`); if(p2) parts.push(`Booking.com→${yen(p2)}`); if(p5) parts.push(`自社HP→${yen(p5)}`);
+  if(mn) parts.push(`最低${mn}泊`); if(av!=='') parts.push(av==='1'?'空室にする':'ブロック');
+  if(!confirm(`${Object.keys(dates).length}日に適用します:\n${parts.join(' / ')}\n\nBeds24に送信しますか?`)) return;
+  $('saveBtn').disabled=true; setStatus('保存中…');
+  try{
+    const res = await api('setRoomDates', {authentication:auth(), roomId: CONFIG.roomId, dates});
+    toast('保存しました: '+JSON.stringify(res).slice(0,80));
+    state.selected.clear();
+    $('resetBtn').onclick();
+    await load();
+  }catch(e){
+    toast('保存エラー: '+e.message, 6000);
+    $('saveBtn').disabled=false; setStatus('');
+  }
+};
+
+// ==== 設定 ====
+function openSettings(){
+  const c = CONFIG || {};
+  $('cfgApiKey').value = c.apiKey||'';
+  $('cfgPropKey').value = c.propKey||'';
+  $('cfgRoomId').value = c.roomId||DEFAULTS.roomId;
+  $('cfgName').value = c.name||DEFAULTS.name;
+  $('cfgBcomRatio').value = c.bcomRatio||DEFAULTS.bcomRatio;
+  $('cfgHpRatio').value = c.hpRatio||DEFAULTS.hpRatio;
+  $('cfgFloor').value = c.floor!==undefined?c.floor:DEFAULTS.floor;
+  $('settingsOverlay').classList.add('show');
+}
+$('settingsBtn').onclick = openSettings;
+$('cfgSaveBtn').onclick = ()=>{
+  const c = {
+    apiKey: $('cfgApiKey').value.trim(),
+    propKey: $('cfgPropKey').value.trim(),
+    roomId: $('cfgRoomId').value.trim(),
+    name: $('cfgName').value.trim(),
+    bcomRatio: parseFloat($('cfgBcomRatio').value)||DEFAULTS.bcomRatio,
+    hpRatio: parseFloat($('cfgHpRatio').value)||DEFAULTS.hpRatio,
+    floor: parseInt($('cfgFloor').value)||0
+  };
+  if(!c.apiKey || !c.propKey || !c.roomId){ toast('APIキー・propKey・roomIdは必須です'); return; }
+  saveConfig(c);
+  $('settingsOverlay').classList.remove('show');
+  load();
+};
+
+loadConfig();
+load();
+</script>
+</body>
+</html>
