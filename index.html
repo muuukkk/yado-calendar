@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="宿カレンダー">
@@ -11,71 +11,83 @@
   :root { --accent:#FF385C; --ink:#222; --sub:#717171; --line:#ebebeb; --ok:#008a05; }
   * { box-sizing:border-box; margin:0; padding:0; font-family:"Hiragino Sans","Yu Gothic UI","Segoe UI",system-ui,sans-serif; }
   body { color:var(--ink); background:#fff; }
-  header { display:flex; align-items:center; gap:12px; padding:12px 16px; border-bottom:1px solid var(--line); position:sticky; top:0; background:#fff; z-index:10; flex-wrap:wrap; }
-  header h1 { font-size:17px; font-weight:700; }
-  .month-nav { display:flex; align-items:center; gap:8px; }
-  .month-nav button { border:1px solid var(--line); background:#fff; border-radius:50%; width:34px; height:34px; font-size:16px; cursor:pointer; }
+  header { display:flex; align-items:center; gap:10px; padding:10px 16px; border-bottom:1px solid var(--line); position:sticky; top:0; background:#fff; z-index:10; flex-wrap:wrap; }
+  #propSel { font-size:15px; font-weight:700; border:none; background:#fff; max-width:46vw; cursor:pointer; }
+  .month-nav { display:flex; align-items:center; gap:6px; }
+  .month-nav button { border:1px solid var(--line); background:#fff; border-radius:50%; width:32px; height:32px; font-size:15px; cursor:pointer; }
   .month-nav button:hover { background:#f7f7f7; }
-  #monthLabel { font-size:16px; font-weight:700; min-width:120px; text-align:center; }
+  #monthLabel { font-size:15px; font-weight:700; min-width:104px; text-align:center; }
   .spacer { flex:1; }
   .chipbar { display:flex; gap:6px; align-items:center; flex-wrap:wrap; }
-  .chip { border:1px solid var(--line); background:#fff; border-radius:999px; padding:6px 12px; font-size:12px; cursor:pointer; }
+  .chip { border:1px solid var(--line); background:#fff; border-radius:999px; padding:5px 11px; font-size:12px; cursor:pointer; }
   .chip:hover { border-color:#222; }
-  #status { font-size:12px; color:var(--sub); padding:4px 16px; min-height:20px; }
+  #status { font-size:11px; color:var(--sub); padding:3px 16px; min-height:17px; }
   .layout { display:flex; gap:0; align-items:flex-start; }
-  .cal-wrap { flex:1; padding:8px 8px 40px 16px; min-width:0; }
+  .cal-wrap { flex:1; padding:6px 8px 40px 14px; min-width:0; }
   table.cal { width:100%; border-collapse:collapse; table-layout:fixed; }
-  .cal th { font-size:12px; color:var(--sub); font-weight:600; padding:6px 0; }
-  .cal td { border:1px solid var(--line); height:92px; vertical-align:top; padding:5px 6px; cursor:pointer; position:relative; user-select:none; -webkit-user-select:none; }
+  .cal th { font-size:11px; color:var(--sub); font-weight:600; padding:5px 0; }
+  .cal td { border:1px solid var(--line); height:88px; vertical-align:top; padding:4px 5px; cursor:pointer; position:relative; user-select:none; -webkit-user-select:none; touch-action:manipulation; overflow:hidden; }
   .cal td.empty { background:#fafafa; cursor:default; }
   .cal td:hover:not(.empty) { border-color:#bbb; }
   .cal td.selected { outline:2px solid var(--ink); outline-offset:-2px; border-radius:8px; z-index:1; }
-  .d { font-size:13px; font-weight:600; }
-  .d.today { color:#fff; background:var(--accent); border-radius:50%; display:inline-block; width:22px; height:22px; text-align:center; line-height:22px; }
-  .price { font-size:13px; font-weight:700; margin-top:5px; }
-  .meta { font-size:10px; color:var(--sub); margin-top:2px; }
+  .d { font-size:12px; font-weight:600; }
+  .d.today { color:#fff; background:var(--accent); border-radius:50%; display:inline-block; width:20px; height:20px; text-align:center; line-height:20px; }
+  .price { font-size:12px; font-weight:700; margin-top:4px; white-space:nowrap; overflow:hidden; text-overflow:clip; letter-spacing:-0.3px; font-variant-numeric:tabular-nums; }
+  .meta { font-size:9px; color:var(--sub); margin-top:1px; white-space:nowrap; overflow:hidden; }
   td.booked { background:#f0f7ff; }
-  td.booked .price { color:var(--sub); text-decoration:line-through; }
-  .guest { font-size:10px; background:#1a73e8; color:#fff; border-radius:4px; padding:1px 5px; display:inline-block; margin-top:4px; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  td.booked .price { color:#9aa5b1; text-decoration:line-through; font-weight:500; }
+  .guest { font-size:9px; background:#1a73e8; color:#fff; border-radius:4px; padding:1px 4px; display:inline-block; margin-top:3px; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   td.blocked { background:repeating-linear-gradient(45deg,#fafafa,#fafafa 6px,#f0f0f0 6px,#f0f0f0 12px); }
-  .blocklabel { font-size:10px; color:var(--sub); margin-top:4px; }
-  .panel { width:300px; border-left:1px solid var(--line); padding:18px; position:sticky; top:60px; }
+  .blocklabel { font-size:9px; color:var(--sub); margin-top:3px; white-space:nowrap; }
+  .panel { width:310px; border-left:1px solid var(--line); padding:16px; position:sticky; top:56px; }
   .panel h2 { font-size:15px; margin-bottom:4px; }
-  .panel .sel-info { font-size:12px; color:var(--sub); margin-bottom:14px; }
-  .field { margin-bottom:13px; }
-  .field label { display:block; font-size:12px; font-weight:600; margin-bottom:4px; }
-  .field input, .field select { width:100%; padding:9px 10px; border:1px solid #b0b0b0; border-radius:8px; font-size:14px; }
+  .panel .sel-info { font-size:12px; color:var(--sub); margin-bottom:12px; }
+  .field { margin-bottom:12px; }
+  .field label { display:block; font-size:12px; font-weight:600; margin-bottom:3px; }
+  .field input, .field select { width:100%; padding:9px 10px; border:1px solid #b0b0b0; border-radius:8px; font-size:16px; }
   .field .hint { font-size:11px; color:var(--sub); margin-top:3px; }
-  .auto-tag { font-size:10px; color:var(--ok); margin-left:6px; }
+  .auto-tag { font-size:10px; color:var(--ok); margin-left:5px; font-weight:400; }
   .btn { width:100%; padding:12px; border:none; border-radius:8px; background:var(--accent); color:#fff; font-size:15px; font-weight:700; cursor:pointer; }
   .btn:disabled { background:#ddd; cursor:default; }
   .btn.ghost { background:#fff; color:var(--ink); border:1px solid var(--ink); margin-top:8px; }
+  .btn.small { width:auto; padding:7px 12px; font-size:12px; }
   #toast { position:fixed; bottom:24px; left:50%; transform:translateX(-50%); background:#222; color:#fff; padding:12px 20px; border-radius:8px; font-size:14px; display:none; z-index:100; max-width:90vw; }
-  .legend { display:flex; gap:14px; font-size:11px; color:var(--sub); padding:0 16px 6px; flex-wrap:wrap; }
+  .legend { display:flex; gap:12px; font-size:11px; color:var(--sub); padding:0 16px 4px; flex-wrap:wrap; }
   .legend span::before { content:""; display:inline-block; width:10px; height:10px; border-radius:2px; margin-right:4px; vertical-align:-1px; }
   .lg-open::before { background:#fff; border:1px solid #ccc; }
   .lg-booked::before { background:#f0f7ff; border:1px solid #cfe3ff; }
   .lg-blocked::before { background:repeating-linear-gradient(45deg,#fafafa,#fafafa 3px,#e0e0e0 3px,#e0e0e0 6px); }
-  /* 設定モーダル */
-  #settingsOverlay { position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:50; display:none; align-items:center; justify-content:center; padding:16px; }
+  #settingsOverlay { position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:50; display:none; align-items:flex-start; justify-content:center; padding:16px; overflow:auto; }
   #settingsOverlay.show { display:flex; }
-  .modal { background:#fff; border-radius:14px; padding:24px; width:420px; max-width:100%; max-height:90vh; overflow:auto; }
+  .modal { background:#fff; border-radius:14px; padding:22px; width:460px; max-width:100%; margin:auto; }
   .modal h2 { font-size:17px; margin-bottom:6px; }
-  .modal .desc { font-size:12px; color:var(--sub); margin-bottom:16px; }
+  .modal h3 { font-size:13px; margin:16px 0 8px; border-top:1px solid var(--line); padding-top:14px; }
+  .modal .desc { font-size:11px; color:var(--sub); margin-bottom:14px; }
   .modal .row2 { display:flex; gap:10px; }
   .modal .row2 .field { flex:1; }
+  .rowdef { display:flex; gap:6px; margin-bottom:6px; align-items:center; }
+  .rowdef input { padding:7px 8px; font-size:13px; border:1px solid #b0b0b0; border-radius:6px; }
+  .rowdef .rd-code { width:52px; }
+  .rowdef .rd-label { flex:1; }
+  .rowdef .rd-ratio { width:64px; }
+  .rowdef button { border:none; background:#eee; border-radius:6px; width:26px; height:26px; cursor:pointer; }
   @media (max-width:820px){
     .layout{flex-direction:column;}
     .panel{width:100%; border-left:none; border-top:1px solid var(--line); position:static;}
-    .cal td{height:72px; padding:3px 4px;}
-    .price{font-size:11px;} .meta{display:none;} .guest{font-size:9px;}
-    header{padding:10px 12px; gap:8px;}
+    .cal td{height:auto; min-height:58px; padding:2px 3px;}
+    .d{font-size:11px;} .d.today{width:17px;height:17px;line-height:17px;}
+    .price{font-size:10px; margin-top:2px; letter-spacing:-0.4px;}
+    .meta{display:none;}
+    .guest{font-size:8px; padding:1px 3px; margin-top:2px; border-radius:3px;}
+    .blocklabel{font-size:8px;}
+    header{padding:8px 10px; gap:6px;}
+    .cal-wrap{padding:4px 4px 20px 6px;}
   }
 </style>
 </head>
 <body>
 <header>
-  <h1 id="propName">宿カレンダー</h1>
+  <select id="propSel"></select>
   <div class="month-nav">
     <button id="prevBtn">‹</button>
     <div id="monthLabel"></div>
@@ -84,16 +96,15 @@
   <button class="chip" id="todayBtn">今日</button>
   <div class="spacer"></div>
   <div class="chipbar">
-    <span style="font-size:11px;color:var(--sub)">曜日選択:</span>
     <button class="chip" data-dow="5">金</button>
     <button class="chip" data-dow="6">土</button>
     <button class="chip" data-dow="0">日</button>
-    <button class="chip" id="clearSel">選択解除</button>
-    <button class="chip" id="reloadBtn">↻ 更新</button>
-    <button class="chip" id="settingsBtn">⚙ 設定</button>
+    <button class="chip" id="clearSel">解除</button>
+    <button class="chip" id="reloadBtn">↻</button>
+    <button class="chip" id="settingsBtn">⚙</button>
   </div>
 </header>
-<div class="legend"><span class="lg-open">空室(タップで選択、ドラッグで範囲選択)</span><span class="lg-booked">予約済</span><span class="lg-blocked">ブロック中</span></div>
+<div class="legend"><span class="lg-open">空室</span><span class="lg-booked">予約済</span><span class="lg-blocked">ブロック中</span></div>
 <div id="status"></div>
 <div class="layout">
   <div class="cal-wrap">
@@ -105,20 +116,7 @@
   <div class="panel">
     <h2>選択した日付の編集</h2>
     <div class="sel-info" id="selInfo">日付を選択してください</div>
-    <div class="field">
-      <label>Airbnb価格 (P1)</label>
-      <input type="number" id="inP1" placeholder="変更しない" inputmode="numeric">
-      <div class="hint">入力するとBooking.com・自社HPを自動計算(手修正も可)</div>
-    </div>
-    <div class="field">
-      <label>Booking.com価格 (P2) <span class="auto-tag" id="autoP2"></span></label>
-      <input type="number" id="inP2" placeholder="変更しない" inputmode="numeric">
-    </div>
-    <div class="field">
-      <label>自社HP価格 (P5) <span class="auto-tag" id="autoP5"></span></label>
-      <input type="number" id="inP5" placeholder="変更しない" inputmode="numeric">
-      <div class="hint">空欄の価格は変更されません</div>
-    </div>
+    <div id="rowInputs"></div>
     <div class="field">
       <label>最低泊数</label>
       <input type="number" id="inMin" placeholder="変更しない" min="1" inputmode="numeric">
@@ -140,31 +138,54 @@
 <div id="settingsOverlay">
   <div class="modal">
     <h2>設定</h2>
-    <div class="desc">キーはこの端末のブラウザ内にのみ保存されます(サーバーには送られません)。Beds24の (SETTINGS) ACCOUNT > ACCOUNT ACCESS でAPIキー、(SETTINGS) PROPERTIES > ACCESS でpropKeyを発行できます。</div>
-    <div class="field"><label>Beds24 APIキー</label><input type="text" id="cfgApiKey"></div>
-    <div class="field"><label>propKey(物件キー)</label><input type="text" id="cfgPropKey"></div>
-    <div class="row2">
-      <div class="field"><label>roomId</label><input type="text" id="cfgRoomId"></div>
-      <div class="field"><label>物件名(表示用)</label><input type="text" id="cfgName"></div>
-    </div>
-    <div class="row2">
-      <div class="field"><label>Booking.com係数</label><input type="number" step="0.001" id="cfgBcomRatio"><div class="hint">P2=P1×係数。手数料差吸収(推奨1.19)</div></div>
-      <div class="field"><label>自社HP係数</label><input type="number" step="0.001" id="cfgHpRatio"><div class="hint">P5=P1×係数。最低レート保証(推奨0.95)</div></div>
-    </div>
+    <div class="desc">キーはこの端末のブラウザ内にのみ保存されます(外部サーバーには送られません)。</div>
+    <div class="field"><label>Beds24 APIキー(共通)</label><input type="text" id="cfgApiKey"></div>
     <div class="field"><label>下限価格(円/泊)</label><input type="number" id="cfgFloor"><div class="hint">これを下回る保存は警告(損益分岐ガード)</div></div>
-    <button class="btn" id="cfgSaveBtn">保存して開始</button>
+    <h3>物件: <select id="cfgPropSel" style="font-size:13px"></select> <button class="btn small ghost" id="cfgAddProp" style="margin:0 0 0 8px">+物件を追加</button></h3>
+    <div class="field"><label>物件名</label><input type="text" id="cfgName"></div>
+    <div class="row2">
+      <div class="field"><label>propKey</label><input type="text" id="cfgPropKey"></div>
+      <div class="field"><label>roomId</label><input type="text" id="cfgRoomId"></div>
+    </div>
+    <h3>価格行(チャネル別)</h3>
+    <div class="desc">係数=基準価格(1行目)に掛ける倍率。空欄なら自動計算しません。Beds24のPRICES > DAILY PRICE RULESで行を追加すると新しいPコード(p3,p6など)が使えます。</div>
+    <div style="display:flex;gap:6px;font-size:10px;color:var(--sub);margin-bottom:2px"><span style="width:52px">Pコード</span><span style="flex:1">ラベル</span><span style="width:64px">係数</span><span style="width:26px"></span></div>
+    <div id="cfgRows"></div>
+    <button class="btn small ghost" id="cfgAddRow" style="margin-top:4px">+行を追加</button>
+    <div style="margin-top:18px"><button class="btn" id="cfgSaveBtn">保存して開始</button></div>
+    <button class="btn ghost" id="cfgDelProp">この物件を削除</button>
   </div>
 </div>
 <div id="toast"></div>
 <script>
-const DEFAULTS = { roomId:'548308', name:'野町villa 一棟貸切', bcomRatio:1.19, hpRatio:0.95, floor:8000 };
+const DEFAULT_ROWS = [
+  {code:'p1', label:'Airbnb', ratio:1},
+  {code:'p2', label:'Booking.com', ratio:1.19},
+  {code:'p5', label:'自社HP', ratio:0.95}
+];
+const DEFAULT_PROP = () => ({name:'新しい物件', propKey:'', roomId:'', rows: JSON.parse(JSON.stringify(DEFAULT_ROWS))});
 let CONFIG = null;
-function loadConfig(){
-  try { CONFIG = JSON.parse(localStorage.getItem('yadoCalConfig')); } catch(e){ CONFIG = null; }
-}
-function saveConfig(c){ localStorage.setItem('yadoCalConfig', JSON.stringify(c)); CONFIG = c; }
 
-const state = { y: new Date().getFullYear(), m: new Date().getMonth(), roomDates: {}, bookedMap: {}, selected: new Set(), dragging: false, dragMode: true, p2Manual:false, p5Manual:false };
+function loadConfig(){
+  try { CONFIG = JSON.parse(localStorage.getItem('yadoCalConfig2')); } catch(e){ CONFIG = null; }
+  if(!CONFIG){
+    // 旧バージョン(単一物件)からの移行
+    try {
+      const old = JSON.parse(localStorage.getItem('yadoCalConfig'));
+      if(old && old.apiKey){
+        CONFIG = { apiKey: old.apiKey, floor: old.floor||8000, active:0, props:[{
+          name: old.name||'物件1', propKey: old.propKey, roomId: old.roomId,
+          rows: [ {code:'p1',label:'Airbnb',ratio:1}, {code:'p2',label:'Booking.com',ratio:old.bcomRatio||1.19}, {code:'p5',label:'自社HP',ratio:old.hpRatio||0.95} ]
+        }]};
+        saveConfig(CONFIG);
+      }
+    } catch(e){}
+  }
+}
+function saveConfig(c){ localStorage.setItem('yadoCalConfig2', JSON.stringify(c)); CONFIG = c; }
+const prop = () => CONFIG.props[CONFIG.active||0];
+
+const state = { y: new Date().getFullYear(), m: new Date().getMonth(), roomDates: {}, bookedMap: {}, selected: new Set(), dragging: false, dragMode: true };
 
 const $ = id => document.getElementById(id);
 const pad = n => String(n).padStart(2,'0');
@@ -177,18 +198,57 @@ function toast(msg, ms=3000){ const t=$('toast'); t.textContent=msg; t.style.dis
 function setStatus(msg){ $('status').textContent = msg; }
 
 async function api(ep, body){
-  // 注意: Content-Typeヘッダーを付けるとCORS preflightが発生しBeds24側で失敗するため付けない
+  // Content-Typeヘッダーを付けるとCORS preflightが発生しBeds24側で失敗するため付けない
   const r = await fetch('https://api.beds24.com/json/'+ep, {method:'POST', body: JSON.stringify(body)});
   if(!r.ok) throw new Error('HTTP '+r.status);
   const j = await r.json();
   if(j && j.error) throw new Error(j.error);
   return j;
 }
-const auth = () => ({apiKey: CONFIG.apiKey, propKey: CONFIG.propKey});
+const auth = () => ({apiKey: CONFIG.apiKey, propKey: prop().propKey});
+
+function renderPropSel(){
+  const sel = $('propSel');
+  sel.innerHTML = CONFIG.props.map((p,i)=>`<option value="${i}" ${i===(CONFIG.active||0)?'selected':''}>${p.name}</option>`).join('');
+}
+$('propSel').addEventListener('change', ()=>{ CONFIG.active = parseInt($('propSel').value); saveConfig(CONFIG); state.selected.clear(); renderRowInputs(); load(); });
+
+function renderRowInputs(){
+  const rows = prop().rows||[];
+  $('rowInputs').innerHTML = rows.map((r,i)=>`
+    <div class="field">
+      <label>${r.label} (${r.code.toUpperCase()})${i===0?' ─ 基準':''} <span class="auto-tag" data-tag="${r.code}"></span></label>
+      <input type="number" data-code="${r.code}" data-i="${i}" placeholder="変更しない" inputmode="numeric">
+      ${i===0?'<div class="hint">入力すると他の行を係数で自動計算(手修正も可)</div>':''}
+    </div>`).join('');
+  const inputs = [...$('rowInputs').querySelectorAll('input')];
+  const base = inputs[0];
+  if(base){
+    base.addEventListener('input', ()=>{
+      const v = parseFloat(base.value);
+      inputs.slice(1).forEach(inp=>{
+        if(inp.dataset.manual==='1') return;
+        const r = rows[parseInt(inp.dataset.i)];
+        const tag = $('rowInputs').querySelector(`[data-tag="${r.code}"]`);
+        if(isNaN(v) || !r.ratio){ inp.value=''; if(tag) tag.textContent=''; return; }
+        inp.value = Math.max(round10(v * r.ratio), CONFIG.floor||0);
+        if(tag) tag.textContent='自動';
+      });
+    });
+    inputs.slice(1).forEach(inp=>{
+      inp.addEventListener('keydown', ()=>{
+        inp.dataset.manual='1';
+        const r = rows[parseInt(inp.dataset.i)];
+        const tag = $('rowInputs').querySelector(`[data-tag="${r.code}"]`);
+        if(tag) tag.textContent='手動';
+      });
+    });
+  }
+}
 
 async function load(){
-  if(!CONFIG || !CONFIG.apiKey || !CONFIG.propKey){ openSettings(); return; }
-  $('propName').textContent = CONFIG.name || '宿カレンダー';
+  if(!CONFIG || !CONFIG.apiKey || !prop() || !prop().propKey){ openSettings(); return; }
+  renderPropSel();
   setStatus('読み込み中…');
   const y=state.y, m=state.m;
   const last = new Date(y, m+1, 0).getDate();
@@ -198,17 +258,17 @@ async function load(){
   const fromDate = monthStart < yest ? yest : monthStart;
   const monthEnd = new Date(y, m, last);
   const from = iso(fromDate.getFullYear(), fromDate.getMonth(), fromDate.getDate()), to = iso(y,m,last);
-  const skipRates = monthEnd < yest; // 過去の月は料金取得をスキップし予約のみ表示
+  const skipRates = monthEnd < yest;
   const arrFrom = new Date(y, m, 1); arrFrom.setDate(arrFrom.getDate()-45);
   try{
     const [rd, bk] = await Promise.all([
-      skipRates ? Promise.resolve({}) : api('getRoomDates', {authentication:auth(), roomId: CONFIG.roomId, from, to}),
+      skipRates ? Promise.resolve({}) : api('getRoomDates', {authentication:auth(), roomId: prop().roomId, from, to}),
       api('getBookings', {authentication:auth(), arrivalFrom: iso(arrFrom.getFullYear(),arrFrom.getMonth(),arrFrom.getDate()), arrivalTo: to})
     ]);
     state.roomDates = rd || {};
     state.bookedMap = {};
     (Array.isArray(bk)?bk:[]).forEach(b=>{
-      if(!['1','2','3','4'].includes(String(b.status))) return; // 0=キャンセルは除外
+      if(!['1','2','3','4'].includes(String(b.status))) return;
       const label = String(b.status)==='4' ? 'ブラックアウト' : `${b.guestFirstName||''} (${b.referer||b.apiSource||''})`;
       let d = new Date(b.firstNight+'T00:00:00');
       const end = new Date(b.lastNight+'T00:00:00');
@@ -231,6 +291,7 @@ function render(){
   const firstDow = new Date(y,m,1).getDay();
   const last = new Date(y,m+1,0).getDate();
   const today = new Date(); const todayKey = key(today.getFullYear(), today.getMonth(), today.getDate());
+  const baseCode = (prop().rows && prop().rows[0]) ? prop().rows[0].code : 'p1';
   let html='', cell=0;
   html+='<tr>';
   for(let i=0;i<firstDow;i++){ html+='<td class="empty"></td>'; cell++; }
@@ -242,10 +303,10 @@ function render(){
     const cls = [booked?'booked':'', blocked?'blocked':'', state.selected.has(k)?'selected':''].join(' ');
     html+=`<td class="${cls}" data-k="${k}">`;
     html+=`<span class="d ${k===todayKey?'today':''}">${d}</span>`;
-    if(rd.p1!==undefined) html+=`<div class="price">${yen(rd.p1)}</div>`;
+    if(rd[baseCode]!==undefined) html+=`<div class="price">${yen(rd[baseCode])}</div>`;
     if(rd.m!==undefined) html+=`<div class="meta">最低${rd.m}泊</div>`;
     if(booked) html+=`<span class="guest">${booked}</span>`;
-    if(blocked) html+=`<div class="blocklabel">ブロック中</div>`;
+    if(blocked) html+=`<div class="blocklabel">ブロック</div>`;
     html+='</td>';
     cell++;
     if(cell%7===0 && d<last) html+='</tr><tr>';
@@ -275,22 +336,16 @@ function updatePanel(){
   $('saveBtn').disabled = n===0;
 }
 
-// ==== 手数料差の自動計算 ====
-$('inP1').addEventListener('input', ()=>{
-  const v = parseFloat($('inP1').value);
-  if(isNaN(v)){ if(!state.p2Manual) $('inP2').value=''; if(!state.p5Manual) $('inP5').value=''; $('autoP2').textContent=''; $('autoP5').textContent=''; return; }
-  if(!state.p2Manual){ $('inP2').value = round10(v * (CONFIG.bcomRatio||1.19)); $('autoP2').textContent='自動'; }
-  if(!state.p5Manual){ $('inP5').value = Math.max(round10(v * (CONFIG.hpRatio||0.95)), CONFIG.floor||0); $('autoP5').textContent='自動'; }
-});
-$('inP2').addEventListener('keydown', ()=>{ state.p2Manual=true; $('autoP2').textContent='手動'; });
-$('inP5').addEventListener('keydown', ()=>{ state.p5Manual=true; $('autoP5').textContent='手動'; });
-
 $('prevBtn').onclick = ()=>{ state.m--; if(state.m<0){state.m=11;state.y--;} state.selected.clear(); load(); };
 $('nextBtn').onclick = ()=>{ state.m++; if(state.m>11){state.m=0;state.y++;} state.selected.clear(); load(); };
 $('todayBtn').onclick = ()=>{ const t=new Date(); state.y=t.getFullYear(); state.m=t.getMonth(); state.selected.clear(); load(); };
 $('reloadBtn').onclick = ()=> load();
 $('clearSel').onclick = ()=>{ state.selected.clear(); render(); };
-$('resetBtn').onclick = ()=>{ ['inP1','inP2','inP5','inMin'].forEach(i=>$(i).value=''); $('inAvail').value=''; state.p2Manual=false; state.p5Manual=false; $('autoP2').textContent=''; $('autoP5').textContent=''; };
+$('resetBtn').onclick = ()=>{
+  $('rowInputs').querySelectorAll('input').forEach(i=>{ i.value=''; delete i.dataset.manual; });
+  $('rowInputs').querySelectorAll('.auto-tag').forEach(t=>t.textContent='');
+  $('inMin').value=''; $('inAvail').value='';
+};
 document.querySelectorAll('.chip[data-dow]').forEach(ch=>{
   ch.onclick = ()=>{
     const dow = parseInt(ch.dataset.dow);
@@ -303,17 +358,19 @@ document.querySelectorAll('.chip[data-dow]').forEach(ch=>{
 });
 
 $('saveBtn').onclick = async ()=>{
-  const p1=$('inP1').value, p2=$('inP2').value, p5=$('inP5').value, mn=$('inMin').value, av=$('inAvail').value;
-  if(!p1 && !p2 && !p5 && !mn && av===''){ toast('変更内容を入力してください'); return; }
-  // 下限価格ガード
+  const rowVals = {};
+  $('rowInputs').querySelectorAll('input').forEach(inp=>{ if(inp.value) rowVals[inp.dataset.code] = inp.value; });
+  const mn=$('inMin').value, av=$('inAvail').value;
+  if(!Object.keys(rowVals).length && !mn && av===''){ toast('変更内容を入力してください'); return; }
   const floor = CONFIG.floor || 0;
-  const below = [p1,p2,p5].filter(v=>v && parseFloat(v) < floor);
+  const below = Object.values(rowVals).filter(v=>parseFloat(v) < floor);
   if(below.length && !confirm(`警告: 下限価格 ${yen(floor)} を下回る価格が含まれます。本当に保存しますか?`)) return;
   const dates={};
   const bookedSel=[];
   state.selected.forEach(k=>{
     const o={};
-    if(p1) o.p1=p1; if(p2) o.p2=p2; if(p5) o.p5=p5; if(mn) o.m=mn;
+    Object.entries(rowVals).forEach(([c,v])=> o[c]=v);
+    if(mn) o.m=mn;
     if(av!==''){
       if(state.bookedMap[k]){ bookedSel.push(k); } else { o.i=av; }
     }
@@ -321,14 +378,14 @@ $('saveBtn').onclick = async ()=>{
   });
   if(bookedSel.length && av!==''){ toast(`予約済みの${bookedSel.length}日は空室状態を変更せずスキップします`, 4000); }
   if(!Object.keys(dates).length){ toast('適用対象がありません'); return; }
-  const parts=[];
-  if(p1) parts.push(`Airbnb→${yen(p1)}`); if(p2) parts.push(`Booking.com→${yen(p2)}`); if(p5) parts.push(`自社HP→${yen(p5)}`);
+  const labelOf = c => { const r=(prop().rows||[]).find(r=>r.code===c); return r?r.label:c.toUpperCase(); };
+  const parts = Object.entries(rowVals).map(([c,v])=>`${labelOf(c)}→${yen(v)}`);
   if(mn) parts.push(`最低${mn}泊`); if(av!=='') parts.push(av==='1'?'空室にする':'ブロック');
   if(!confirm(`${Object.keys(dates).length}日に適用します:\n${parts.join(' / ')}\n\nBeds24に送信しますか?`)) return;
   $('saveBtn').disabled=true; setStatus('保存中…');
   try{
-    const res = await api('setRoomDates', {authentication:auth(), roomId: CONFIG.roomId, dates});
-    toast('保存しました: '+JSON.stringify(res).slice(0,80));
+    const res = await api('setRoomDates', {authentication:auth(), roomId: prop().roomId, dates});
+    toast('保存しました');
     state.selected.clear();
     $('resetBtn').onclick();
     await load();
@@ -339,35 +396,69 @@ $('saveBtn').onclick = async ()=>{
 };
 
 // ==== 設定 ====
+let cfgActive = 0;
 function openSettings(){
-  const c = CONFIG || {};
-  $('cfgApiKey').value = c.apiKey||'';
-  $('cfgPropKey').value = c.propKey||'';
-  $('cfgRoomId').value = c.roomId||DEFAULTS.roomId;
-  $('cfgName').value = c.name||DEFAULTS.name;
-  $('cfgBcomRatio').value = c.bcomRatio||DEFAULTS.bcomRatio;
-  $('cfgHpRatio').value = c.hpRatio||DEFAULTS.hpRatio;
-  $('cfgFloor').value = c.floor!==undefined?c.floor:DEFAULTS.floor;
+  if(!CONFIG) CONFIG = { apiKey:'', floor:8000, active:0, props:[ Object.assign(DEFAULT_PROP(), {name:'野町villa 一棟貸切', roomId:'548308'}) ] };
+  cfgActive = CONFIG.active||0;
+  $('cfgApiKey').value = CONFIG.apiKey||'';
+  $('cfgFloor').value = CONFIG.floor!==undefined?CONFIG.floor:8000;
+  renderCfgProp();
   $('settingsOverlay').classList.add('show');
 }
+function renderCfgProp(){
+  $('cfgPropSel').innerHTML = CONFIG.props.map((p,i)=>`<option value="${i}" ${i===cfgActive?'selected':''}>${p.name}</option>`).join('');
+  const p = CONFIG.props[cfgActive];
+  $('cfgName').value = p.name||'';
+  $('cfgPropKey').value = p.propKey||'';
+  $('cfgRoomId').value = p.roomId||'';
+  renderCfgRows(p.rows||[]);
+}
+function renderCfgRows(rows){
+  $('cfgRows').innerHTML = rows.map((r,i)=>`
+    <div class="rowdef" data-i="${i}">
+      <input class="rd-code" value="${r.code}">
+      <input class="rd-label" value="${r.label}">
+      <input class="rd-ratio" type="number" step="0.001" value="${r.ratio!==null&&r.ratio!==undefined?r.ratio:''}">
+      <button data-del="${i}">×</button>
+    </div>`).join('');
+  $('cfgRows').querySelectorAll('button[data-del]').forEach(b=>{
+    b.onclick = ()=>{ collectCfgProp(); CONFIG.props[cfgActive].rows.splice(parseInt(b.dataset.del),1); renderCfgRows(CONFIG.props[cfgActive].rows); };
+  });
+}
+function collectCfgProp(){
+  const p = CONFIG.props[cfgActive];
+  p.name = $('cfgName').value.trim();
+  p.propKey = $('cfgPropKey').value.trim();
+  p.roomId = $('cfgRoomId').value.trim();
+  p.rows = [...$('cfgRows').querySelectorAll('.rowdef')].map(div=>({
+    code: div.querySelector('.rd-code').value.trim().toLowerCase(),
+    label: div.querySelector('.rd-label').value.trim(),
+    ratio: parseFloat(div.querySelector('.rd-ratio').value)||null
+  })).filter(r=>r.code);
+}
+$('cfgPropSel').addEventListener('change', ()=>{ collectCfgProp(); cfgActive = parseInt($('cfgPropSel').value); renderCfgProp(); });
+$('cfgAddProp').onclick = ()=>{ collectCfgProp(); CONFIG.props.push(DEFAULT_PROP()); cfgActive = CONFIG.props.length-1; renderCfgProp(); };
+$('cfgAddRow').onclick = ()=>{ collectCfgProp(); CONFIG.props[cfgActive].rows.push({code:'', label:'', ratio:null}); renderCfgRows(CONFIG.props[cfgActive].rows); };
+$('cfgDelProp').onclick = ()=>{
+  if(CONFIG.props.length<=1){ toast('最後の物件は削除できません'); return; }
+  if(!confirm(`「${CONFIG.props[cfgActive].name}」を削除しますか?`)) return;
+  CONFIG.props.splice(cfgActive,1); cfgActive=0; renderCfgProp();
+};
 $('settingsBtn').onclick = openSettings;
 $('cfgSaveBtn').onclick = ()=>{
-  const c = {
-    apiKey: $('cfgApiKey').value.trim(),
-    propKey: $('cfgPropKey').value.trim(),
-    roomId: $('cfgRoomId').value.trim(),
-    name: $('cfgName').value.trim(),
-    bcomRatio: parseFloat($('cfgBcomRatio').value)||DEFAULTS.bcomRatio,
-    hpRatio: parseFloat($('cfgHpRatio').value)||DEFAULTS.hpRatio,
-    floor: parseInt($('cfgFloor').value)||0
-  };
-  if(!c.apiKey || !c.propKey || !c.roomId){ toast('APIキー・propKey・roomIdは必須です'); return; }
-  saveConfig(c);
+  collectCfgProp();
+  CONFIG.apiKey = $('cfgApiKey').value.trim();
+  CONFIG.floor = parseInt($('cfgFloor').value)||0;
+  CONFIG.active = cfgActive;
+  const p = CONFIG.props[cfgActive];
+  if(!CONFIG.apiKey || !p.propKey || !p.roomId){ toast('APIキー・propKey・roomIdは必須です'); return; }
+  saveConfig(CONFIG);
   $('settingsOverlay').classList.remove('show');
-  load();
+  renderPropSel(); renderRowInputs(); load();
 };
 
 loadConfig();
+if(CONFIG){ renderPropSel(); renderRowInputs(); }
 load();
 </script>
 </body>
