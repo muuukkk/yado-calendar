@@ -161,7 +161,13 @@
 const DEFAULT_ROWS = [
   {code:'p1', label:'Airbnb', ratio:1},
   {code:'p2', label:'Booking.com', ratio:1.19},
-  {code:'p5', label:'自社HP', ratio:0.95}
+  {code:'p3', label:'自社HP', ratio:0.95},
+  {code:'p4', label:'HP3泊〜', ratio:0.855},
+  {code:'p5', label:'HP4泊〜', ratio:0.808},
+  {code:'p6', label:'HP7泊〜', ratio:0.779},
+  {code:'p7', label:'HP直前', ratio:0.808},
+  {code:'p8', label:'HP直前3泊', ratio:0.727},
+  {code:'p9', label:'HP直前4泊', ratio:0.686}
 ];
 const DEFAULT_PROP = () => ({name:'新しい物件', propKey:'', roomId:'', rows: JSON.parse(JSON.stringify(DEFAULT_ROWS))});
 let CONFIG = null;
@@ -175,7 +181,7 @@ function loadConfig(){
       if(old && old.apiKey){
         CONFIG = { apiKey: old.apiKey, floor: old.floor||8000, active:0, props:[{
           name: old.name||'物件1', propKey: old.propKey, roomId: old.roomId,
-          rows: [ {code:'p1',label:'Airbnb',ratio:1}, {code:'p2',label:'Booking.com',ratio:old.bcomRatio||1.19}, {code:'p5',label:'自社HP',ratio:old.hpRatio||0.95} ]
+          rows: JSON.parse(JSON.stringify(DEFAULT_ROWS))
         }]};
         saveConfig(CONFIG);
       }
