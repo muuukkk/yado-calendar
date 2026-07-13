@@ -16,7 +16,19 @@
   .month-nav { display:flex; align-items:center; gap:6px; }
   .month-nav button { border:1px solid var(--line); background:#fff; border-radius:50%; width:32px; height:32px; font-size:15px; cursor:pointer; }
   .month-nav button:hover { background:#f7f7f7; }
-  #monthLabel { font-size:15px; font-weight:700; min-width:104px; text-align:center; }
+  #monthLabel { font-size:15px; font-weight:700; min-width:104px; text-align:center; cursor:pointer; border-radius:8px; padding:4px 6px; }
+  #monthLabel:hover { background:#f7f7f7; }
+  #monthPickerOverlay { position:fixed; inset:0; background:rgba(0,0,0,.45); z-index:60; display:none; align-items:center; justify-content:center; padding:16px; }
+  #monthPickerOverlay.show { display:flex; }
+  .mpmodal { background:#fff; border-radius:14px; padding:20px; width:320px; max-width:100%; }
+  .mp-head { display:flex; align-items:center; justify-content:center; gap:14px; margin-bottom:14px; }
+  .mp-head button { border:1px solid var(--line); background:#fff; border-radius:50%; width:34px; height:34px; font-size:15px; cursor:pointer; }
+  .mp-head div { font-size:16px; font-weight:700; min-width:74px; text-align:center; }
+  .mp-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:8px; }
+  .mp-grid button { padding:13px 0; border:1px solid var(--line); border-radius:8px; background:#fff; font-size:14px; cursor:pointer; }
+  .mp-grid button:hover { border-color:#222; }
+  .mp-grid button.cur { background:var(--accent); color:#fff; border-color:var(--accent); font-weight:700; }
+  .mp-grid button.past { color:#c0c0c0; }
   .spacer { flex:1; }
   .chipbar { display:flex; gap:6px; align-items:center; flex-wrap:wrap; }
   .chip { border:1px solid var(--line); background:#fff; border-radius:999px; padding:5px 11px; font-size:12px; cursor:pointer; }
@@ -156,6 +168,16 @@
     <button class="btn ghost" id="cfgDelProp">この物件を削除</button>
   </div>
 </div>
+<div id="monthPickerOverlay">
+  <div class="mpmodal">
+    <div class="mp-head">
+      <button id="mpPrevY">‹</button>
+      <div id="mpYear"></div>
+      <button id="mpNextY">›</button>
+    </div>
+    <div class="mp-grid" id="mpGrid"></div>
+  </div>
+</div>
 <div id="toast"></div>
 <script>
 const DEFAULT_ROWS = [
@@ -293,7 +315,7 @@ async function load(){
 
 function render(){
   const y=state.y, m=state.m;
-  $('monthLabel').textContent = `${y}年${m+1}月`;
+  $('monthLabel').textContent = `${y}年${m+1}月 ▾`;
   const firstDow = new Date(y,m,1).getDay();
   const last = new Date(y,m+1,0).getDate();
   const today = new Date(); const todayKey = key(today.getFullYear(), today.getMonth(), today.getDate());
@@ -473,6 +495,32 @@ $('cfgSaveBtn').onclick = ()=>{
   $('settingsOverlay').classList.remove('show');
   renderPropSel(); renderRowInputs(); load();
 };
+
+// ==== 月ピッカー(年表示から数ヶ月先へジャンプ) ====
+let mpYear = null;
+function renderMonthPicker(){
+  $('mpYear').textContent = mpYear + '年';
+  const now = new Date();
+  let html='';
+  for(let mm=0; mm<12; mm++){
+    const isCur = (mpYear===state.y && mm===state.m);
+    const isPast = new Date(mpYear, mm+1, 0) < new Date(now.getFullYear(), now.getMonth(), 1);
+    html += `<button data-m="${mm}" class="${isCur?'cur':''}${isPast?' past':''}">${mm+1}月</button>`;
+  }
+  $('mpGrid').innerHTML = html;
+  $('mpGrid').querySelectorAll('button').forEach(b=>{
+    b.onclick = ()=>{
+      state.y = mpYear; state.m = parseInt(b.dataset.m);
+      state.selected.clear();
+      $('monthPickerOverlay').classList.remove('show');
+      load();
+    };
+  });
+}
+$('monthLabel').onclick = ()=>{ mpYear = state.y; renderMonthPicker(); $('monthPickerOverlay').classList.add('show'); };
+$('mpPrevY').onclick = ()=>{ mpYear--; renderMonthPicker(); };
+$('mpNextY').onclick = ()=>{ mpYear++; renderMonthPicker(); };
+$('monthPickerOverlay').addEventListener('click', e=>{ if(e.target.id==='monthPickerOverlay') e.target.classList.remove('show'); });
 
 loadConfig();
 if(CONFIG){ renderPropSel(); renderRowInputs(); }
