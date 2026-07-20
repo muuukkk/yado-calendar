@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="宿カレンダー">
@@ -55,7 +55,7 @@
   .blocklabel { font-size:9px; color:var(--sub); margin-top:3px; white-space:nowrap; }
   .minflag { font-size:9px; background:#ff8f00; color:#fff; border-radius:4px; padding:1px 4px; display:inline-block; margin-top:2px; white-space:nowrap; }
   #panelClose { display:none; float:right; }
-  #selBar { position:fixed; left:12px; right:12px; bottom:12px; z-index:44; background:#222; color:#fff; border-radius:999px; padding:8px 8px 8px 18px; display:none; align-items:center; justify-content:space-between; font-size:14px; box-shadow:0 4px 14px rgba(0,0,0,.3); }
+  #selBar { position:fixed; left:12px; right:12px; bottom:calc(12px + env(safe-area-inset-bottom)); z-index:44; background:#222; color:#fff; border-radius:999px; padding:8px 8px 8px 18px; display:none; align-items:center; justify-content:space-between; font-size:14px; box-shadow:0 4px 14px rgba(0,0,0,.3); }
   #selBar button { border:none; background:var(--accent); color:#fff; border-radius:999px; padding:9px 14px; font-size:13px; font-weight:700; cursor:pointer; }
   #loadingMore { text-align:center; color:var(--sub); font-size:12px; padding:12px; display:none; }
   .panel { width:310px; border-left:1px solid var(--line); padding:16px; position:sticky; top:56px; }
@@ -351,19 +351,24 @@ function monthHTML(y,m){
 
 function bindCells(root){
   root.querySelectorAll('td[data-k]').forEach(td=>{
-    // マウス: pointerdownでドラッグ範囲選択 / タッチ: clickで単純トグル(スクロールと誤反応しない)
-    td.addEventListener('pointerdown', e=>{
-      state.lastPointerType = e.pointerType;
-      if(e.pointerType==='mouse'){
-        e.preventDefault();
-        state.dragging=true; state.dragMode=!state.selected.has(td.dataset.k);
-        toggleSel(td.dataset.k, state.dragMode);
-      }
-    });
-    td.addEventListener('pointerover', e=>{ if(state.dragging && e.pointerType==='mouse') toggleSel(td.dataset.k, state.dragMode); });
-    td.addEventListener('click', ()=>{
-      if(state.lastPointerType!=='mouse') toggleSel(td.dataset.k, !state.selected.has(td.dataset.k));
-    });
+    if(window.PointerEvent){
+      // マウス: pointerdownでドラッグ範囲選択 / タッチ: clickで単純トグル(スクロールと誤反応しない)
+      td.addEventListener('pointerdown', e=>{
+        state.lastPointerType = e.pointerType;
+        if(e.pointerType==='mouse'){
+          e.preventDefault();
+          state.dragging=true; state.dragMode=!state.selected.has(td.dataset.k);
+          toggleSel(td.dataset.k, state.dragMode);
+        }
+      });
+      td.addEventListener('pointerover', e=>{ if(state.dragging && e.pointerType==='mouse') toggleSel(td.dataset.k, state.dragMode); });
+      td.addEventListener('click', ()=>{
+        if(state.lastPointerType!=='mouse') toggleSel(td.dataset.k, !state.selected.has(td.dataset.k));
+      });
+    } else {
+      // PointerEvent非対応ブラウザ向けフォールバック
+      td.addEventListener('click', ()=> toggleSel(td.dataset.k, !state.selected.has(td.dataset.k)));
+    }
   });
 }
 document.addEventListener('pointerup', ()=> state.dragging=false);
@@ -383,9 +388,10 @@ function updatePanel(){
   const n = state.selected.size;
   $('selInfo').textContent = n ? `${n}日選択中` : '日付を選択してください';
   $('saveBtn').disabled = n===0;
-  // スマホ: 選択中は下部バーを表示(編集シートを開くボタン)
-  $('selBarText').textContent = `${n}日選択中`;
-  if(n>0 && !$('panel').classList.contains('open')) $('selBar').classList.add('show');
+  // スマホ: 下部バーは常時表示(選択状況を表示し、編集シートを開く入口にする)
+  $('selBarText').textContent = n ? `${n}日選択中` : '日付をタップで選択';
+  $('selBarEdit').style.display = n ? 'block' : 'none';
+  if(!$('panel').classList.contains('open')) $('selBar').classList.add('show');
   else $('selBar').classList.remove('show');
 }
 $('selBarEdit').onclick = ()=>{ $('panel').classList.add('open'); $('selBar').classList.remove('show'); };
