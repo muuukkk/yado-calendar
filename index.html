@@ -53,6 +53,10 @@
   .guest { font-size:9px; background:#1a73e8; color:#fff; border-radius:4px; padding:1px 4px; display:inline-block; margin-top:3px; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   td.blocked { background:repeating-linear-gradient(45deg,#fafafa,#fafafa 6px,#f0f0f0 6px,#f0f0f0 12px); }
   .blocklabel { font-size:9px; color:var(--sub); margin-top:3px; white-space:nowrap; }
+  .minflag { font-size:9px; background:#ff8f00; color:#fff; border-radius:4px; padding:1px 4px; display:inline-block; margin-top:2px; white-space:nowrap; }
+  #panelClose { display:none; float:right; }
+  #selBar { position:fixed; left:12px; right:12px; bottom:12px; z-index:44; background:#222; color:#fff; border-radius:999px; padding:8px 8px 8px 18px; display:none; align-items:center; justify-content:space-between; font-size:14px; box-shadow:0 4px 14px rgba(0,0,0,.3); }
+  #selBar button { border:none; background:var(--accent); color:#fff; border-radius:999px; padding:9px 14px; font-size:13px; font-weight:700; cursor:pointer; }
   #loadingMore { text-align:center; color:var(--sub); font-size:12px; padding:12px; display:none; }
   .panel { width:310px; border-left:1px solid var(--line); padding:16px; position:sticky; top:56px; }
   .panel h2 { font-size:15px; margin-bottom:4px; }
@@ -88,7 +92,10 @@
   .rowdef button { border:none; background:#eee; border-radius:6px; width:26px; height:26px; cursor:pointer; }
   @media (max-width:820px){
     .layout{flex-direction:column;}
-    .panel{width:100%; border-left:none; border-top:1px solid var(--line); position:static;}
+    .panel{position:fixed; left:0; right:0; bottom:0; width:100%; border-left:none; border-top:1px solid var(--line); background:#fff; z-index:45; border-radius:16px 16px 0 0; box-shadow:0 -6px 24px rgba(0,0,0,.18); max-height:78vh; overflow:auto; transform:translateY(110%); transition:transform .25s; padding-bottom:30px;}
+    .panel.open{transform:translateY(0);}
+    #panelClose{display:inline-block;}
+    #selBar.show{display:flex;}
     .cal td{height:auto; min-height:58px; padding:2px 3px;}
     .d{font-size:11px;} .d.today{width:17px;height:17px;line-height:17px;}
     .price{font-size:10px; margin-top:2px; letter-spacing:-0.4px;}
@@ -127,7 +134,8 @@
     <div id="calList"></div>
     <div id="loadingMore">翌月を読み込み中…</div>
   </div>
-  <div class="panel">
+  <div class="panel" id="panel">
+    <button id="panelClose" class="chip">閉じる</button>
     <h2>選択した日付の編集</h2>
     <div class="sel-info" id="selInfo">日付を選択してください</div>
     <div id="rowInputs"></div>
@@ -154,7 +162,10 @@
     <h2>設定</h2>
     <div class="desc">キーはこの端末のブラウザ内にのみ保存されます(外部サーバーには送られません)。</div>
     <div class="field"><label>Beds24 APIキー(共通)</label><input type="text" id="cfgApiKey"></div>
-    <div class="field"><label>下限価格(円/泊)</label><input type="number" id="cfgFloor"><div class="hint">これを下回る保存は警告(損益分岐ガード)</div></div>
+    <div class="row2">
+      <div class="field"><label>下限価格(円/泊)</label><input type="number" id="cfgFloor"><div class="hint">これを下回る保存は警告</div></div>
+      <div class="field"><label>標準の最低泊数</label><input type="number" id="cfgStdMin"><div class="hint">違う日はオレンジで強調表示</div></div>
+    </div>
     <h3>物件: <select id="cfgPropSel" style="font-size:13px"></select> <button class="btn small ghost" id="cfgAddProp" style="margin:0 0 0 8px">+物件を追加</button></h3>
     <div class="field"><label>物件名</label><input type="text" id="cfgName"></div>
     <div class="row2">
@@ -180,6 +191,7 @@
     <div class="mp-grid" id="mpGrid"></div>
   </div>
 </div>
+<div id="selBar"><span id="selBarText"></span><button id="selBarEdit">価格・泊数を編集</button></div>
 <div id="toast"></div>
 <script>
 const DEFAULT_ROWS = [
@@ -276,15 +288,14 @@ function renderRowInputs(){
   }
 }
 
-// ==== データ取得(月単位でマージ) ====
-async function fetchMonthData(y,m){
-  const last = new Date(y, m+1, 0).getDate();
+// ==== データ取得(複数月を1回のAPI呼び出しでまとめて取得し、利用制限を回避) ====
+async function fetchRange(y,m,count){
+  const endD = new Date(y, m+count, 0); // 最終月の末日
   const yest = new Date(); yest.setDate(yest.getDate()-1); yest.setHours(0,0,0,0);
-  const monthStart = new Date(y, m, 1);
-  const fromDate = monthStart < yest ? yest : monthStart;
-  const monthEnd = new Date(y, m, last);
-  const from = iso(fromDate.getFullYear(), fromDate.getMonth(), fromDate.getDate()), to = iso(y,m,last);
-  const skipRates = monthEnd < yest; // 過去の月は料金取得をスキップ
+  const startD = new Date(y, m, 1);
+  const fromDate = startD < yest ? yest : startD;
+  const from = iso(fromDate.getFullYear(), fromDate.getMonth(), fromDate.getDate()), to = iso(endD.getFullYear(), endD.getMonth(), endD.getDate());
+  const skipRates = endD < yest; // 全期間が過去なら料金取得をスキップ
   const arrFrom = new Date(y, m, 1); arrFrom.setDate(arrFrom.getDate()-45);
   const [rd, bk] = await Promise.all([
     skipRates ? Promise.resolve({}) : api('getRoomDates', {authentication:auth(), roomId: prop().roomId, from, to}),
@@ -322,7 +333,11 @@ function monthHTML(y,m){
     html+=`<td class="${cls}" data-k="${k}">`;
     html+=`<span class="d ${k===todayKey?'today':''}">${d}</span>`;
     if(rd[baseCode]!==undefined) html+=`<div class="price">${yen(rd[baseCode])}</div>`;
-    if(rd.m!==undefined) html+=`<div class="meta">最低${rd.m}泊</div>`;
+    if(rd.m!==undefined){
+      // 標準と違う最低泊数はオレンジで強調(スマホでも表示)
+      if(parseInt(rd.m)!==(CONFIG.stdMin||2)) html+=`<div class="minflag">最低${rd.m}泊</div>`;
+      else html+=`<div class="meta">最低${rd.m}泊</div>`;
+    }
     if(booked) html+=`<span class="guest">${booked}</span>`;
     if(blocked) html+=`<div class="blocklabel">ブロック</div>`;
     html+='</td>';
@@ -368,11 +383,37 @@ function updatePanel(){
   const n = state.selected.size;
   $('selInfo').textContent = n ? `${n}日選択中` : '日付を選択してください';
   $('saveBtn').disabled = n===0;
+  // スマホ: 選択中は下部バーを表示(編集シートを開くボタン)
+  $('selBarText').textContent = `${n}日選択中`;
+  if(n>0 && !$('panel').classList.contains('open')) $('selBar').classList.add('show');
+  else $('selBar').classList.remove('show');
+}
+$('selBarEdit').onclick = ()=>{ $('panel').classList.add('open'); $('selBar').classList.remove('show'); };
+$('panelClose').onclick = ()=>{ $('panel').classList.remove('open'); updatePanel(); };
+function friendlyError(e){
+  const msg = /credit|limit|too many/i.test(e.message)
+    ? 'Beds24のAPI利用制限に達しました。5分ほど待ってから ↻ を押してください'
+    : '読み込みエラー: '+e.message;
+  toast(msg, 6000); setStatus('');
 }
 function updateMonthLabel(){ $('monthLabel').textContent = `${state.startY}年${state.startM+1}月 ▾`; }
 
-// ==== 無限スクロール ====
-async function appendMonth(){
+// ==== 無限スクロール(3ヶ月ずつまとめて読み込み=API呼び出しを1/3に) ====
+const CHUNK = 3;
+function addSection(y,m){
+  state.months.push({y,m});
+  const div = document.createElement('div');
+  div.className = 'month-sec';
+  div.innerHTML = monthHTML(y,m);
+  $('calList').appendChild(div);
+  bindCells(div);
+}
+function rebuildSections(){
+  $('calList').innerHTML = state.months.map(mm=>`<div class="month-sec">${monthHTML(mm.y,mm.m)}</div>`).join('');
+  bindCells($('calList'));
+  refreshSel();
+}
+async function appendChunk(){
   if(state.appending || state.months.length >= MAX_MONTHS) return;
   if(!CONFIG || !CONFIG.apiKey || !prop() || !prop().propKey) return;
   state.appending = true;
@@ -380,19 +421,17 @@ async function appendMonth(){
   const lastM = state.months[state.months.length-1];
   const y = lastM ? (lastM.m===11 ? lastM.y+1 : lastM.y) : state.startY;
   const m = lastM ? (lastM.m+1)%12 : state.startM;
+  const count = Math.min(CHUNK, MAX_MONTHS - state.months.length);
   try{
-    await fetchMonthData(y,m);
-    state.months.push({y,m});
-    const div = document.createElement('div');
-    div.className = 'month-sec';
-    div.innerHTML = monthHTML(y,m);
-    $('calList').appendChild(div);
-    bindCells(div);
+    await fetchRange(y,m,count);
+    for(let i=0;i<count;i++){
+      const d = new Date(y, m+i, 1);
+      addSection(d.getFullYear(), d.getMonth());
+    }
     refreshSel();
     setStatus(`最終更新: ${new Date().toLocaleTimeString('ja-JP')}　(Beds24連携中)`);
   }catch(e){
-    toast('読み込みエラー: '+e.message, 6000);
-    setStatus('');
+    friendlyError(e);
   }
   $('loadingMore').style.display = 'none';
   state.appending = false;
@@ -406,19 +445,27 @@ async function resetTo(y,m){
   $('calList').innerHTML = '';
   updateMonthLabel();
   window.scrollTo(0,0);
-  await appendMonth();
-  // 画面が埋まらない場合はもう1ヶ月読み込む
-  if(document.body.scrollHeight <= window.innerHeight + 100) await appendMonth();
+  await appendChunk();
 }
 
 window.addEventListener('scroll', ()=>{
-  if(window.innerHeight + window.scrollY > document.body.scrollHeight - 600) appendMonth();
+  if(window.innerHeight + window.scrollY > document.body.scrollHeight - 600) appendChunk();
 });
 
 $('prevBtn').onclick = ()=>{ let y=state.startY, m=state.startM-1; if(m<0){m=11;y--;} state.selected.clear(); resetTo(y,m); };
 $('nextBtn').onclick = ()=>{ let y=state.startY, m=state.startM+1; if(m>11){m=0;y++;} state.selected.clear(); resetTo(y,m); };
 $('todayBtn').onclick = ()=>{ const t=new Date(); state.selected.clear(); resetTo(t.getFullYear(), t.getMonth()); };
-$('reloadBtn').onclick = async ()=>{ const n = Math.max(state.months.length,1); await resetTo(state.startY, state.startM); for(let i=1;i<n;i++) await appendMonth(); };
+$('reloadBtn').onclick = async ()=>{
+  if(!state.months.length){ resetTo(state.startY, state.startM); return; }
+  // 表示中の全期間を1回のAPI呼び出しで再取得
+  try{
+    setStatus('更新中…');
+    state.roomDates = {}; state.bookedMap = {};
+    await fetchRange(state.startY, state.startM, state.months.length);
+    rebuildSections();
+    setStatus(`最終更新: ${new Date().toLocaleTimeString('ja-JP')}　(Beds24連携中)`);
+  }catch(e){ friendlyError(e); }
+};
 $('clearSel').onclick = ()=>{ state.selected.clear(); refreshSel(); };
 $('resetBtn').onclick = ()=>{
   $('rowInputs').querySelectorAll('input').forEach(i=>{ i.value=''; delete i.dataset.manual; });
@@ -467,11 +514,16 @@ $('saveBtn').onclick = async ()=>{
   try{
     await api('setRoomDates', {authentication:auth(), roomId: prop().roomId, dates});
     toast('保存しました');
+    // 保存した日付を含む月だけ再取得(API節約)し、画面は全月描き直し
+    const ks = Object.keys(dates).sort();
+    const y0=+ks[0].slice(0,4), m0=+ks[0].slice(4,6)-1;
+    const y1=+ks[ks.length-1].slice(0,4), m1=+ks[ks.length-1].slice(4,6)-1;
     state.selected.clear();
     $('resetBtn').onclick();
-    const n = Math.max(state.months.length,1);
-    await resetTo(state.startY, state.startM);
-    for(let i=1;i<n;i++) await appendMonth();
+    $('panel').classList.remove('open');
+    try{ await fetchRange(y0, m0, (y1-y0)*12+(m1-m0)+1); }catch(e){}
+    rebuildSections();
+    setStatus(`最終更新: ${new Date().toLocaleTimeString('ja-JP')}　(Beds24連携中)`);
   }catch(e){
     toast('保存エラー: '+e.message, 6000);
     $('saveBtn').disabled=false; setStatus('');
@@ -485,6 +537,7 @@ function openSettings(){
   cfgActive = CONFIG.active||0;
   $('cfgApiKey').value = CONFIG.apiKey||'';
   $('cfgFloor').value = CONFIG.floor!==undefined?CONFIG.floor:8000;
+  $('cfgStdMin').value = CONFIG.stdMin!==undefined?CONFIG.stdMin:2;
   renderCfgProp();
   $('settingsOverlay').classList.add('show');
 }
@@ -532,6 +585,7 @@ $('cfgSaveBtn').onclick = ()=>{
   collectCfgProp();
   CONFIG.apiKey = $('cfgApiKey').value.trim();
   CONFIG.floor = parseInt($('cfgFloor').value)||0;
+  CONFIG.stdMin = parseInt($('cfgStdMin').value)||2;
   CONFIG.active = cfgActive;
   const p = CONFIG.props[cfgActive];
   if(!CONFIG.apiKey || !p.propKey || !p.roomId){ toast('APIキー・propKey・roomIdは必須です'); return; }
