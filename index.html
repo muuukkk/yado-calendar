@@ -35,7 +35,9 @@
   .chip:hover { border-color:#222; }
   #status { font-size:11px; color:var(--sub); padding:3px 16px; min-height:17px; }
   .layout { display:flex; gap:0; align-items:flex-start; }
-  .cal-wrap { flex:1; padding:6px 8px 40px 14px; min-width:0; }
+  .cal-wrap { flex:1; padding:6px 8px 60px 14px; min-width:0; }
+  .month-sec { margin-bottom:22px; }
+  .mlabel { font-size:15px; font-weight:700; padding:10px 4px 6px; }
   table.cal { width:100%; border-collapse:collapse; table-layout:fixed; }
   .cal th { font-size:11px; color:var(--sub); font-weight:600; padding:5px 0; }
   .cal td { border:1px solid var(--line); height:88px; vertical-align:top; padding:4px 5px; cursor:pointer; position:relative; user-select:none; -webkit-user-select:none; -webkit-touch-callout:none; touch-action:manipulation; overflow:hidden; }
@@ -51,6 +53,7 @@
   .guest { font-size:9px; background:#1a73e8; color:#fff; border-radius:4px; padding:1px 4px; display:inline-block; margin-top:3px; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   td.blocked { background:repeating-linear-gradient(45deg,#fafafa,#fafafa 6px,#f0f0f0 6px,#f0f0f0 12px); }
   .blocklabel { font-size:9px; color:var(--sub); margin-top:3px; white-space:nowrap; }
+  #loadingMore { text-align:center; color:var(--sub); font-size:12px; padding:12px; display:none; }
   .panel { width:310px; border-left:1px solid var(--line); padding:16px; position:sticky; top:56px; }
   .panel h2 { font-size:15px; margin-bottom:4px; }
   .panel .sel-info { font-size:12px; color:var(--sub); margin-bottom:12px; }
@@ -93,7 +96,8 @@
     .guest{font-size:8px; padding:1px 3px; margin-top:2px; border-radius:3px;}
     .blocklabel{font-size:8px;}
     header{padding:8px 10px; gap:6px;}
-    .cal-wrap{padding:4px 4px 20px 6px;}
+    .cal-wrap{padding:4px 4px 40px 6px;}
+    .mlabel { position:sticky; top:0; background:rgba(255,255,255,.95); z-index:5; }
   }
 </style>
 </head>
@@ -116,14 +120,12 @@
     <button class="chip" id="settingsBtn">⚙</button>
   </div>
 </header>
-<div class="legend"><span class="lg-open">空室</span><span class="lg-booked">予約済</span><span class="lg-blocked">ブロック中</span></div>
+<div class="legend"><span class="lg-open">空室</span><span class="lg-booked">予約済</span><span class="lg-blocked">ブロック中</span><span style="border:none">スクロールで翌月が読み込まれます</span></div>
 <div id="status"></div>
 <div class="layout">
   <div class="cal-wrap">
-    <table class="cal">
-      <thead><tr><th>日</th><th>月</th><th>火</th><th>水</th><th>木</th><th>金</th><th>土</th></tr></thead>
-      <tbody id="calBody"></tbody>
-    </table>
+    <div id="calList"></div>
+    <div id="loadingMore">翌月を読み込み中…</div>
   </div>
   <div class="panel">
     <h2>選択した日付の編集</h2>
@@ -160,7 +162,7 @@
       <div class="field"><label>roomId</label><input type="text" id="cfgRoomId"></div>
     </div>
     <h3>価格行(チャネル別)</h3>
-    <div class="desc">係数=基準価格(1行目)に掛ける倍率。空欄なら自動計算しません。Beds24のPRICES > DAILY PRICE RULESで行を追加すると新しいPコード(p3,p6など)が使えます。</div>
+    <div class="desc">係数=基準価格(1行目)に掛ける倍率。空欄なら自動計算しません。Beds24のPRICES > DAILY PRICE RULESで行を追加すると新しいPコードが使えます。</div>
     <div style="display:flex;gap:6px;font-size:10px;color:var(--sub);margin-bottom:2px"><span style="width:52px">Pコード</span><span style="flex:1">ラベル</span><span style="width:64px">係数</span><span style="width:26px"></span></div>
     <div id="cfgRows"></div>
     <button class="btn small ghost" id="cfgAddRow" style="margin-top:4px">+行を追加</button>
@@ -197,7 +199,6 @@ let CONFIG = null;
 function loadConfig(){
   try { CONFIG = JSON.parse(localStorage.getItem('yadoCalConfig2')); } catch(e){ CONFIG = null; }
   if(!CONFIG){
-    // 旧バージョン(単一物件)からの移行
     try {
       const old = JSON.parse(localStorage.getItem('yadoCalConfig'));
       if(old && old.apiKey){
@@ -213,7 +214,8 @@ function loadConfig(){
 function saveConfig(c){ localStorage.setItem('yadoCalConfig2', JSON.stringify(c)); CONFIG = c; }
 const prop = () => CONFIG.props[CONFIG.active||0];
 
-const state = { y: new Date().getFullYear(), m: new Date().getMonth(), roomDates: {}, bookedMap: {}, selected: new Set(), dragging: false, dragMode: true };
+const state = { startY: new Date().getFullYear(), startM: new Date().getMonth(), months: [], roomDates: {}, bookedMap: {}, selected: new Set(), dragging: false, dragMode: true, lastPointerType: null, appending: false };
+const MAX_MONTHS = 18;
 
 const $ = id => document.getElementById(id);
 const pad = n => String(n).padStart(2,'0');
@@ -239,7 +241,7 @@ function renderPropSel(){
   const sel = $('propSel');
   sel.innerHTML = CONFIG.props.map((p,i)=>`<option value="${i}" ${i===(CONFIG.active||0)?'selected':''}>${p.name}</option>`).join('');
 }
-$('propSel').addEventListener('change', ()=>{ CONFIG.active = parseInt($('propSel').value); saveConfig(CONFIG); state.selected.clear(); renderRowInputs(); load(); });
+$('propSel').addEventListener('change', ()=>{ CONFIG.active = parseInt($('propSel').value); saveConfig(CONFIG); renderRowInputs(); resetTo(state.startY, state.startM); });
 
 function renderRowInputs(){
   const rows = prop().rows||[];
@@ -274,53 +276,41 @@ function renderRowInputs(){
   }
 }
 
-async function load(){
-  if(!CONFIG || !CONFIG.apiKey || !prop() || !prop().propKey){ openSettings(); return; }
-  renderPropSel();
-  setStatus('読み込み中…');
-  const y=state.y, m=state.m;
+// ==== データ取得(月単位でマージ) ====
+async function fetchMonthData(y,m){
   const last = new Date(y, m+1, 0).getDate();
-  // APIは過去日付を受け付けないため、開始日は「昨日」以降に丸める
   const yest = new Date(); yest.setDate(yest.getDate()-1); yest.setHours(0,0,0,0);
   const monthStart = new Date(y, m, 1);
   const fromDate = monthStart < yest ? yest : monthStart;
   const monthEnd = new Date(y, m, last);
   const from = iso(fromDate.getFullYear(), fromDate.getMonth(), fromDate.getDate()), to = iso(y,m,last);
-  const skipRates = monthEnd < yest;
+  const skipRates = monthEnd < yest; // 過去の月は料金取得をスキップ
   const arrFrom = new Date(y, m, 1); arrFrom.setDate(arrFrom.getDate()-45);
-  try{
-    const [rd, bk] = await Promise.all([
-      skipRates ? Promise.resolve({}) : api('getRoomDates', {authentication:auth(), roomId: prop().roomId, from, to}),
-      api('getBookings', {authentication:auth(), arrivalFrom: iso(arrFrom.getFullYear(),arrFrom.getMonth(),arrFrom.getDate()), arrivalTo: to})
-    ]);
-    state.roomDates = rd || {};
-    state.bookedMap = {};
-    (Array.isArray(bk)?bk:[]).forEach(b=>{
-      if(!['1','2','3','4'].includes(String(b.status))) return;
-      const label = String(b.status)==='4' ? 'ブラックアウト' : `${b.guestFirstName||''} (${b.referer||b.apiSource||''})`;
-      let d = new Date(b.firstNight+'T00:00:00');
-      const end = new Date(b.lastNight+'T00:00:00');
-      while(d <= end){
-        state.bookedMap[key(d.getFullYear(), d.getMonth(), d.getDate())] = label;
-        d.setDate(d.getDate()+1);
-      }
-    });
-    render();
-    setStatus(`最終更新: ${new Date().toLocaleTimeString('ja-JP')}　(Beds24連携中)`);
-  }catch(e){
-    setStatus('');
-    toast('読み込みエラー: '+e.message, 6000);
-  }
+  const [rd, bk] = await Promise.all([
+    skipRates ? Promise.resolve({}) : api('getRoomDates', {authentication:auth(), roomId: prop().roomId, from, to}),
+    api('getBookings', {authentication:auth(), arrivalFrom: iso(arrFrom.getFullYear(),arrFrom.getMonth(),arrFrom.getDate()), arrivalTo: to})
+  ]);
+  Object.assign(state.roomDates, rd || {});
+  (Array.isArray(bk)?bk:[]).forEach(b=>{
+    if(!['1','2','3','4'].includes(String(b.status))) return; // 0=キャンセルは除外
+    const label = String(b.status)==='4' ? 'ブラックアウト' : `${b.guestFirstName||''} (${b.referer||b.apiSource||''})`;
+    let d = new Date(b.firstNight+'T00:00:00');
+    const end = new Date(b.lastNight+'T00:00:00');
+    while(d <= end){
+      state.bookedMap[key(d.getFullYear(), d.getMonth(), d.getDate())] = label;
+      d.setDate(d.getDate()+1);
+    }
+  });
 }
 
-function render(){
-  const y=state.y, m=state.m;
-  $('monthLabel').textContent = `${y}年${m+1}月 ▾`;
+// ==== 月セクションの描画 ====
+function monthHTML(y,m){
   const firstDow = new Date(y,m,1).getDay();
   const last = new Date(y,m+1,0).getDate();
   const today = new Date(); const todayKey = key(today.getFullYear(), today.getMonth(), today.getDate());
   const baseCode = (prop().rows && prop().rows[0]) ? prop().rows[0].code : 'p1';
-  let html='', cell=0;
+  let html = `<div class="mlabel">${y}年${m+1}月</div><table class="cal"><thead><tr><th>日</th><th>月</th><th>火</th><th>水</th><th>木</th><th>金</th><th>土</th></tr></thead><tbody>`;
+  let cell=0;
   html+='<tr>';
   for(let i=0;i<firstDow;i++){ html+='<td class="empty"></td>'; cell++; }
   for(let d=1; d<=last; d++){
@@ -340,9 +330,12 @@ function render(){
     if(cell%7===0 && d<last) html+='</tr><tr>';
   }
   while(cell%7!==0){ html+='<td class="empty"></td>'; cell++; }
-  html+='</tr>';
-  $('calBody').innerHTML = html;
-  document.querySelectorAll('td[data-k]').forEach(td=>{
+  html+='</tr></tbody></table>';
+  return html;
+}
+
+function bindCells(root){
+  root.querySelectorAll('td[data-k]').forEach(td=>{
     // マウス: pointerdownでドラッグ範囲選択 / タッチ: clickで単純トグル(スクロールと誤反応しない)
     td.addEventListener('pointerdown', e=>{
       state.lastPointerType = e.pointerType;
@@ -357,7 +350,6 @@ function render(){
       if(state.lastPointerType!=='mouse') toggleSel(td.dataset.k, !state.selected.has(td.dataset.k));
     });
   });
-  updatePanel();
 }
 document.addEventListener('pointerup', ()=> state.dragging=false);
 document.addEventListener('pointercancel', ()=> state.dragging=false);
@@ -368,18 +360,66 @@ function toggleSel(k, on){
   if(td) td.classList.toggle('selected', on);
   updatePanel();
 }
-
+function refreshSel(){
+  document.querySelectorAll('td[data-k]').forEach(td=>td.classList.toggle('selected', state.selected.has(td.dataset.k)));
+  updatePanel();
+}
 function updatePanel(){
   const n = state.selected.size;
   $('selInfo').textContent = n ? `${n}日選択中` : '日付を選択してください';
   $('saveBtn').disabled = n===0;
 }
+function updateMonthLabel(){ $('monthLabel').textContent = `${state.startY}年${state.startM+1}月 ▾`; }
 
-$('prevBtn').onclick = ()=>{ state.m--; if(state.m<0){state.m=11;state.y--;} state.selected.clear(); load(); };
-$('nextBtn').onclick = ()=>{ state.m++; if(state.m>11){state.m=0;state.y++;} state.selected.clear(); load(); };
-$('todayBtn').onclick = ()=>{ const t=new Date(); state.y=t.getFullYear(); state.m=t.getMonth(); state.selected.clear(); load(); };
-$('reloadBtn').onclick = ()=> load();
-$('clearSel').onclick = ()=>{ state.selected.clear(); render(); };
+// ==== 無限スクロール ====
+async function appendMonth(){
+  if(state.appending || state.months.length >= MAX_MONTHS) return;
+  if(!CONFIG || !CONFIG.apiKey || !prop() || !prop().propKey) return;
+  state.appending = true;
+  $('loadingMore').style.display = 'block';
+  const lastM = state.months[state.months.length-1];
+  const y = lastM ? (lastM.m===11 ? lastM.y+1 : lastM.y) : state.startY;
+  const m = lastM ? (lastM.m+1)%12 : state.startM;
+  try{
+    await fetchMonthData(y,m);
+    state.months.push({y,m});
+    const div = document.createElement('div');
+    div.className = 'month-sec';
+    div.innerHTML = monthHTML(y,m);
+    $('calList').appendChild(div);
+    bindCells(div);
+    refreshSel();
+    setStatus(`最終更新: ${new Date().toLocaleTimeString('ja-JP')}　(Beds24連携中)`);
+  }catch(e){
+    toast('読み込みエラー: '+e.message, 6000);
+    setStatus('');
+  }
+  $('loadingMore').style.display = 'none';
+  state.appending = false;
+}
+
+async function resetTo(y,m){
+  if(!CONFIG || !CONFIG.apiKey || !prop() || !prop().propKey){ openSettings(); return; }
+  renderPropSel();
+  state.startY = y; state.startM = m;
+  state.months = []; state.roomDates = {}; state.bookedMap = {};
+  $('calList').innerHTML = '';
+  updateMonthLabel();
+  window.scrollTo(0,0);
+  await appendMonth();
+  // 画面が埋まらない場合はもう1ヶ月読み込む
+  if(document.body.scrollHeight <= window.innerHeight + 100) await appendMonth();
+}
+
+window.addEventListener('scroll', ()=>{
+  if(window.innerHeight + window.scrollY > document.body.scrollHeight - 600) appendMonth();
+});
+
+$('prevBtn').onclick = ()=>{ let y=state.startY, m=state.startM-1; if(m<0){m=11;y--;} state.selected.clear(); resetTo(y,m); };
+$('nextBtn').onclick = ()=>{ let y=state.startY, m=state.startM+1; if(m>11){m=0;y++;} state.selected.clear(); resetTo(y,m); };
+$('todayBtn').onclick = ()=>{ const t=new Date(); state.selected.clear(); resetTo(t.getFullYear(), t.getMonth()); };
+$('reloadBtn').onclick = async ()=>{ const n = Math.max(state.months.length,1); await resetTo(state.startY, state.startM); for(let i=1;i<n;i++) await appendMonth(); };
+$('clearSel').onclick = ()=>{ state.selected.clear(); refreshSel(); };
 $('resetBtn').onclick = ()=>{
   $('rowInputs').querySelectorAll('input').forEach(i=>{ i.value=''; delete i.dataset.manual; });
   $('rowInputs').querySelectorAll('.auto-tag').forEach(t=>t.textContent='');
@@ -388,11 +428,13 @@ $('resetBtn').onclick = ()=>{
 document.querySelectorAll('.chip[data-dow]').forEach(ch=>{
   ch.onclick = ()=>{
     const dow = parseInt(ch.dataset.dow);
-    const last = new Date(state.y, state.m+1, 0).getDate();
-    for(let d=1; d<=last; d++){
-      if(new Date(state.y, state.m, d).getDay()===dow) state.selected.add(key(state.y,state.m,d));
-    }
-    render();
+    state.months.forEach(mm=>{
+      const last = new Date(mm.y, mm.m+1, 0).getDate();
+      for(let d=1; d<=last; d++){
+        if(new Date(mm.y, mm.m, d).getDay()===dow) state.selected.add(key(mm.y,mm.m,d));
+      }
+    });
+    refreshSel();
   };
 });
 
@@ -423,11 +465,13 @@ $('saveBtn').onclick = async ()=>{
   if(!confirm(`${Object.keys(dates).length}日に適用します:\n${parts.join(' / ')}\n\nBeds24に送信しますか?`)) return;
   $('saveBtn').disabled=true; setStatus('保存中…');
   try{
-    const res = await api('setRoomDates', {authentication:auth(), roomId: prop().roomId, dates});
+    await api('setRoomDates', {authentication:auth(), roomId: prop().roomId, dates});
     toast('保存しました');
     state.selected.clear();
     $('resetBtn').onclick();
-    await load();
+    const n = Math.max(state.months.length,1);
+    await resetTo(state.startY, state.startM);
+    for(let i=1;i<n;i++) await appendMonth();
   }catch(e){
     toast('保存エラー: '+e.message, 6000);
     $('saveBtn').disabled=false; setStatus('');
@@ -493,7 +537,8 @@ $('cfgSaveBtn').onclick = ()=>{
   if(!CONFIG.apiKey || !p.propKey || !p.roomId){ toast('APIキー・propKey・roomIdは必須です'); return; }
   saveConfig(CONFIG);
   $('settingsOverlay').classList.remove('show');
-  renderPropSel(); renderRowInputs(); load();
+  renderRowInputs();
+  resetTo(state.startY, state.startM);
 };
 
 // ==== 月ピッカー(年表示から数ヶ月先へジャンプ) ====
@@ -503,28 +548,27 @@ function renderMonthPicker(){
   const now = new Date();
   let html='';
   for(let mm=0; mm<12; mm++){
-    const isCur = (mpYear===state.y && mm===state.m);
+    const isCur = (mpYear===state.startY && mm===state.startM);
     const isPast = new Date(mpYear, mm+1, 0) < new Date(now.getFullYear(), now.getMonth(), 1);
     html += `<button data-m="${mm}" class="${isCur?'cur':''}${isPast?' past':''}">${mm+1}月</button>`;
   }
   $('mpGrid').innerHTML = html;
   $('mpGrid').querySelectorAll('button').forEach(b=>{
     b.onclick = ()=>{
-      state.y = mpYear; state.m = parseInt(b.dataset.m);
-      state.selected.clear();
       $('monthPickerOverlay').classList.remove('show');
-      load();
+      state.selected.clear();
+      resetTo(mpYear, parseInt(b.dataset.m));
     };
   });
 }
-$('monthLabel').onclick = ()=>{ mpYear = state.y; renderMonthPicker(); $('monthPickerOverlay').classList.add('show'); };
+$('monthLabel').onclick = ()=>{ mpYear = state.startY; renderMonthPicker(); $('monthPickerOverlay').classList.add('show'); };
 $('mpPrevY').onclick = ()=>{ mpYear--; renderMonthPicker(); };
 $('mpNextY').onclick = ()=>{ mpYear++; renderMonthPicker(); };
 $('monthPickerOverlay').addEventListener('click', e=>{ if(e.target.id==='monthPickerOverlay') e.target.classList.remove('show'); });
 
 loadConfig();
 if(CONFIG){ renderPropSel(); renderRowInputs(); }
-load();
+resetTo(state.startY, state.startM);
 </script>
 </body>
 </html>
